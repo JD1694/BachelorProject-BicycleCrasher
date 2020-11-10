@@ -1,22 +1,32 @@
 import Serverconnect # Connect to Sensor Device
 import sys
 import traceback
+import keyboard  # hotkeys ???
 from datetime import datetime
 
+def callback_button(log):
+	timestamp = datetime.now()
+	stampStr = "\n###  CRASH AT: " + str(timestamp) + "  ###\n\n"
+	print(stampStr)
+	log.write(stampStr)
+	
 
 if __name__ == "__main__":
 	try:
-		
 		# choose file to save to
 		logname = "dataLog_" + ".txt" #str(datetime.now()) + 
 		log = open(logname, "w")
 		
+		# setup hotkeys
+		keyboard.add_hotkey('space', callback_button, args=[log])
+			
 		# choose connection type (UDP?)
 		UDP_enable = False #Serverconnect.chooseType()
 		
 		# communikation with mikrocontroller
 		print("starting Communication")
 		client, s = Serverconnect.ServerSetup(port=5555, UDP=UDP_enable)
+	
 		
 		print("starting Loop")
 		running = True
