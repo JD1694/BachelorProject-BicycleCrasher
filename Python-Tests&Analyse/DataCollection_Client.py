@@ -5,8 +5,8 @@ import keyboard  # hotkeys ???
 from datetime import datetime
 
 def callback_button(log):
-	timestamp = datetime.now()
-	stampStr = "\n###  CRASH AT: " + str(timestamp) + "  ###\n\n"
+	timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+	stampStr = "\n###  CRASH AT: " + timestamp + "  ###\n\n"
 	print(stampStr)
 	log.write(stampStr)
 	
@@ -14,7 +14,7 @@ def callback_button(log):
 if __name__ == "__main__":
 	try:
 		# choose file to save to
-		logname = "dataLog_" + ".txt" #str(datetime.now()) + 
+		logname = "logs/dataLog_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
 		log = open(logname, "w")
 		
 		# setup hotkeys
