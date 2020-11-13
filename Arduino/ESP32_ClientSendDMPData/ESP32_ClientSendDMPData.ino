@@ -1,30 +1,10 @@
 #include <WiFi.h>
+#include "time.h"
 #include <I2Cdev.h>
 #include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
-
-
-
-// uncomment "OUTPUT_READABLE_YAWPITCHROLL" if you want to see the yaw/
-// pitch/roll angles (in degrees) calculated from the quaternions coming
-// from the FIFO. Note this also requires gravity vector calculations.
-// Also note that yaw/pitch/roll angles suffer from gimbal lock (for
-// more info, see: http://en.wikipedia.org/wiki/Gimbal_lock)
-#define OUTPUT_READABLE_YAWPITCHROLL
-
-// uncomment "OUTPUT_READABLE_REALACCEL" if you want to see acceleration
-// components with gravity removed. This acceleration reference frame is
-// not compensated for orientation, so +X is always +X according to the
-// sensor, just without the effects of gravity. If you want acceleration
-// compensated for orientation, us OUTPUT_READABLE_WORLDACCEL instead.
-#define OUTPUT_READABLE_REALACCEL
-
-
-#define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
-#define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
-bool blinkState = false;
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -42,22 +22,34 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
-const char* ssid="";
-const char* password="";
+// constants to connect to web
+const char *ssid="myGate";
+const char *password="192837465";
 
-const uint16_t* port= 0000;
-const char*  host ="192.168.0.4";
+// constants to connect to server
+const uint16_t port= 5555;
+const char *host ="192.168.137.1";//"192.168.0.207";
+
+// constants to get time from web
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
 MPU6050 mpu(0x68);
 
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-void dmpDataReady() {
-    mpuInterrupt = true;
+void printLocalTime(WiFiClient client)
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    client.print("Failed to obtain time");
+    return;
+  }
+  client.print(&timeinfo, "%Y-%m-%d_%H-%M-%S");
 }
 
 void setup() {
   
-  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
         Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
@@ -70,27 +62,20 @@ void setup() {
     // initialize device
     Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
-    pinMode(INTERRUPT_PIN, INPUT);
 
     // verify connection
     Serial.println(F("Testing device connections..."));
     Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
-    // wait for ready
-    Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    while (Serial.available() && Serial.read()); // empty buffer
-    while (!Serial.available());                 // wait for data
-    while (Serial.available() && Serial.read()); // empty buffer again
-
     // load and configure the DMP
     Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
-    // supply your own gyro offsets here, scaled for min sensitivity
+    // gyro offsets here, scaled for min sensitivity
     mpu.setXGyroOffset(-56); //(220);
     mpu.setYGyroOffset(39); //(76);
     mpu.setZGyroOffset(-15); //(-85);
-    mpu.setZAccelOffset(2925); //(1788); // 1688 factory default for my test chip
+    mpu.setZAccelOffset(2925); //(1788);
 
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
@@ -101,13 +86,6 @@ void setup() {
         // turn on the DMP, now that it's ready
         Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
-
-        // enable Arduino interrupt detection
-        Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
-        Serial.print(digitalPinToInterrupt(INTERRUPT_PIN));
-        Serial.println(F(")..."));
-        attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
-        mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
         Serial.println(F("DMP ready! Waiting for first interrupt..."));
@@ -125,9 +103,7 @@ void setup() {
         Serial.println(F(")"));
     }
 
-    // configure LED for output
-    pinMode(LED_PIN, OUTPUT);
- 
+  // connect to WiFi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -137,93 +113,71 @@ void setup() {
   Serial.print("WiFi connected with IP: ");
   Serial.println(WiFi.localIP());
 
+  //init and get the current time online
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 }
 
 void loop() {
+    // connect to server
+    WiFiClient client;
 
-    if (!dmpReady) return;
-    // read a packet from FIFO
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
-        
-
-        #ifdef OUTPUT_READABLE_YAWPITCHROLL
-            // display Euler angles in degrees
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            Serial.print("ypr\t");
-            Serial.print(ypr[0] * 180/M_PI);
-            Serial.print("\t");
-            Serial.print(ypr[1] * 180/M_PI);
-            Serial.print("\t");
-            Serial.println(ypr[2] * 180/M_PI);
-        #endif
-
-        #ifdef OUTPUT_READABLE_REALACCEL
-            // display real acceleration, adjusted to remove gravity
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetAccel(&aa, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            Serial.print("areal\t");
-            Serial.print(aaReal.x);
-            Serial.print("\t");
-            Serial.print(aaReal.y);
-            Serial.print("\t");
-            Serial.println(aaReal.z);
-        #endif
-
-        
-
-    
-  
-   WiFiClient client;
- 
     if (!client.connect(host, port)) {
- 
         Serial.println("Connection to host failed");
- 
         delay(1000);
         return;
     }
- 
     Serial.println("Connected to server successful!");
- 
+
+    // repeat getting and sending data
+    while (client.connected()) {
+  
+      if (!dmpReady) return;
+      // read a packet from FIFO
+      if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
+          
+          // display Euler angles in degrees
+          mpu.dmpGetQuaternion(&q, fifoBuffer);
+          mpu.dmpGetGravity(&gravity, &q);
+          mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+          // display real acceleration, adjusted to remove gravity
+          mpu.dmpGetAccel(&aa, fifoBuffer);
+          mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     
-    if (!dmpReady) return;
-    // read a packet from FIFO
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
-        
-
-        #ifdef OUTPUT_READABLE_YAWPITCHROLL
-            // display Euler angles in degrees
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-            client.print("ypr\t");
-            client.print(ypr[0] * 180/M_PI);
-            client.print("\t");
-            client.print(ypr[1] * 180/M_PI);
-            client.print("\t");
-            client.println(ypr[2] * 180/M_PI);
-        #endif
-
-        #ifdef OUTPUT_READABLE_REALACCEL
-            // display real acceleration, adjusted to remove gravity
-            mpu.dmpGetQuaternion(&q, fifoBuffer);
-            mpu.dmpGetAccel(&aa, fifoBuffer);
-            mpu.dmpGetGravity(&gravity, &q);
-            mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            client.print("areal\t");
-            client.print(aaReal.x);
-            client.print("\t");
-            client.print(aaReal.y);
-            client.print("\t");
-            client.println(aaReal.z);
-        #endif
-
+          // output to server
+          printLocalTime(client);
+          client.print(", ");
+          client.print("ypr, ");
+          client.print(ypr[0] * 180/M_PI);
+          client.print(", ");
+          client.print(ypr[1] * 180/M_PI);
+          client.print(", ");
+          client.print(ypr[2] * 180/M_PI);
+          client.print(", ");
     
-    blinkState = !blinkState;
-        digitalWrite(LED_PIN, blinkState);
- 
+          // output to Serial Monitior
+          Serial.print("ypr, ");
+          Serial.print(ypr[0] * 180/M_PI);
+          Serial.print(", ");
+          Serial.print(ypr[1] * 180/M_PI);
+          Serial.print(", ");
+          Serial.print(ypr[2] * 180/M_PI);
+          Serial.print(", ");
+    
+          // output to server
+          client.print("areal, ");
+          client.print(aaReal.x);
+          client.print(", ");
+          client.print(aaReal.y);
+          client.print(", ");
+          client.println(aaReal.z);
+          
+          // output to Serial Monitior
+          Serial.print("areal, ");
+          Serial.print(aaReal.x);
+          Serial.print(", ");
+          Serial.print(aaReal.y);
+          Serial.print(", ");
+          Serial.println(aaReal.z);
+     }
+   }
 }

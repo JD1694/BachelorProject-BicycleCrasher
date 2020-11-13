@@ -46,9 +46,7 @@ if __name__ == "__main__":
 					continue
 				
 				# write data to log file
-				log.write(data)
-				log.write("\n")
-				
+				log.write(data)				
 			
 	finally:
 		traceback.print_exc(file=sys.stdout)
