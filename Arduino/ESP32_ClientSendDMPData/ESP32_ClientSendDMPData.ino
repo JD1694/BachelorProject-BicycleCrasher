@@ -44,7 +44,7 @@ void printLocalTime(WiFiClient client)
     client.print("Failed to obtain time");
     return;
   }
-  client.print(&timeinfo, "%Y-%m-%d_%H-%M-%S");
+  client.print(&timeinfo, "%Y-%m-%d_%H-%M-%S.%f");
 }
 
 void setup() {
