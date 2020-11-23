@@ -1,5 +1,5 @@
 """
-Visualizes Data obtained from DataCollection_Client.py. Plots data (accelerometer and orientation calculated with DMP)
+Visualizes Data obtained from DataCollection_Client.py. Plots data (accelerometer and orientation calculated with DMP) as well as timestamps of crashes as marked by DataCollection_Client.py.
 """
 
 

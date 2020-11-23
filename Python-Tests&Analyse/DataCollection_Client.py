@@ -5,9 +5,8 @@ import keyboard  # hotkeys ???
 from datetime import datetime
 
 def callback_button(stamp_log):
-	timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-	stampStr = "\n###  CRASH AT: " + timestamp + "  ###\n\n"
-	print(stampStr)
+	timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.%f")
+	print("\n###  CRASH AT: " + timestamp + "  ###\n\n")
 	stamp_log.write(timestamp + "\n")
 	
 
@@ -41,11 +40,7 @@ if __name__ == "__main__":
 			if data:
 				# stop condition
 				print("data: ", data)
-				if data == "done"or data == "quit":
-					print("\nquit")
-					running = False #beenden
-					continue
-				
+
 				# write data to log file
 				log.write(data)
 			

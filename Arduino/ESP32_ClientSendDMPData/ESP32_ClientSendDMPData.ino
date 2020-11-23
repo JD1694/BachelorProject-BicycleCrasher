@@ -30,10 +30,13 @@ const char *password="192837465";
 const uint16_t port= 5555;
 const char *host ="192.168.137.1";//"192.168.0.207";
 
-// constants to get time from web
+// time from web
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
+float       callsPerSec  = 10;
+int         callsThisSec  = 0;
+int         lastSecondNum = 0;
 
 MPU6050 mpu(0x68);
 
@@ -42,9 +45,30 @@ void printLocalTime(WiFiClient client)
   struct tm timeinfo;
   if(!getLocalTime(&timeinfo)){
     client.print("Failed to obtain time");
+    Serial.print("Failed to obtain time");
     return;
   }
-  client.print(&timeinfo, "%Y-%m-%d_%H-%M-%S.%f");
+
+  // count fractions of second for more precision
+  callsThisSec += 1;
+  // reset fraction at next second
+  if (lastSecondNum != timeinfo.tm_sec){
+    lastSecondNum = timeinfo.tm_sec;
+    callsPerSec = callsPerSec*0.6 + callsThisSec*0.4;
+    callsThisSec = 0;
+  }
+
+  // send
+  client.print( &timeinfo, "%Y-%m-%d_%H-%M-%S" );
+  Serial.print( &timeinfo, "%Y-%m-%d_%H-%M-%S" );
+  if (callsThisSec <= callsPerSec){
+    client.print(String(callsThisSec/callsPerSec).substring(1));
+    Serial.print(String(callsThisSec/callsPerSec).substring(1));
+  }
+  else{
+    client.print(".9999");
+    Serial.print(".9999");
+  }  
 }
 
 void setup() {
@@ -115,6 +139,7 @@ void setup() {
 
   //init and get the current time online
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
 }
 
 void loop() {
@@ -155,6 +180,7 @@ void loop() {
           client.print(", ");
     
           // output to Serial Monitior
+          Serial.print(", ");
           Serial.print("ypr, ");
           Serial.print(ypr[0] * 180/M_PI);
           Serial.print(", ");
