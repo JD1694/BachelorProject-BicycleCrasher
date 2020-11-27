@@ -20,7 +20,7 @@ if __name__ == "__main__":
 	y = 'y'
 	z = 'z'
 	data = {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}}
-	dateFormat = "%Y-%m-%d_%H-%M-%S.%f"
+	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 	
 	# Kommandozeilen Argumente
 	if len(sys.argv) > 1:

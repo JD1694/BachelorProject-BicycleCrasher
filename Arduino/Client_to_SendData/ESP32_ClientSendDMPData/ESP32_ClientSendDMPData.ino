@@ -38,10 +38,9 @@ float       callsPerSec  = 10;
 int         callsThisSec  = 0;
 int         lastSecondNum = 0;
 // time update in milliseconds
-struct tm     timeinfo;         //set at init
 struct tm     tnow;             //update each send cycle
 unsigned long currentTime;      //set each send cycle
-unsigned long initTime;         //set at init, converted from timeinfo
+unsigned long initTime;         //set at init, converted from tnow
 int           millis_left = 0;
 
 MPU6050 mpu(0x68);
@@ -61,10 +60,10 @@ void printLocalTime(WiFiClient client)
     millis_left = (initTime + currentTime-tnow.tm_hour*3600000-tnow.tm_min*60000-tnow.tm_sec*1000);
   
   // send
-  client.print( &tnow, "%Y-%m-%d_%H-%M-%S." );
-  Serial.print( &tnow, "%Y-%m-%d_%H-%M-%S." );
-  client.println(millis_left);
-  Serial.println(millis_left);
+  client.print( &tnow, "%Y-%m-%d_%H-%M-%S-" );
+  Serial.print( &tnow, "%Y-%m-%d_%H-%M-%S-" );
+  client.printf("%03d", millis_left);
+  Serial.printf("%03d", millis_left);
 }
 
 void setup() {
@@ -135,11 +134,11 @@ void setup() {
 
   //init and get the current time online
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  getLocalTime(&timeinfo);
+  getLocalTime(&tnow);
   Serial.print("millis() at init: ");
   Serial.println(millis());
   // convert time to milliseconds. Subtract millis at init, as there may be a small offset from when the timer was initialized and it will be added later.
-  initTime = timeinfo.tm_hour*3600000 + timeinfo.tm_min*60000 + timeinfo.tm_sec*1000 - millis();
+  initTime = tnow.tm_hour*3600000 + tnow.tm_min*60000 + tnow.tm_sec*1000 - millis();
 }
 
 void loop() {
@@ -187,7 +186,7 @@ void loop() {
           Serial.print(ypr[1] * 180/M_PI);
           Serial.print(", ");
           Serial.print(ypr[2] * 180/M_PI);
-          Serial.print(", ");
+          Serial.println(", ");
     
           // output to server
           client.print("areal, ");
@@ -198,12 +197,12 @@ void loop() {
           client.println(aaReal.z);
           
           // output to Serial Monitior
-          Serial.print("areal, ");
+          /*Serial.print("areal, ");
           Serial.print(aaReal.x);
           Serial.print(", ");
           Serial.print(aaReal.y);
           Serial.print(", ");
-          Serial.println(aaReal.z);
+          Serial.println(aaReal.z);*/
      }
    }
 }
