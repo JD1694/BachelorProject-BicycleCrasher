@@ -16,6 +16,7 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 Quaternion q;           // [w, x, y, z]         quaternion container
 VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
 VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
 VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;    // [x, y, z]            gravity vector
@@ -159,26 +160,26 @@ void loop() {
       // read a packet from FIFO
       if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
           
-          // display Euler angles in degrees
+          // get Euler angles in degrees
           mpu.dmpGetQuaternion(&q, fifoBuffer);
           mpu.dmpGetGravity(&gravity, &q);
           mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-          // display real acceleration, adjusted to remove gravity
+          // get real acceleration, adjusted to remove gravity
           mpu.dmpGetAccel(&aa, fifoBuffer);
           mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+          // get gyro measurement
+          mpu.dmpGetGyro(&gy, fifoBuffer);
     
-          // output to server
+          // YPR: to server
           printLocalTime(client);
-          client.print(", ");
-          client.print("ypr, ");
+          client.print(", ypr, ");
           client.print(ypr[0] * 180/M_PI);
           client.print(", ");
           client.print(ypr[1] * 180/M_PI);
           client.print(", ");
           client.print(ypr[2] * 180/M_PI);
-          client.print(", ");
     
-          // output to Serial Monitior
+          // YPR: to Serial Monitior
           Serial.print(", ");
           Serial.print("ypr, ");
           Serial.print(ypr[0] * 180/M_PI);
@@ -186,23 +187,54 @@ void loop() {
           Serial.print(ypr[1] * 180/M_PI);
           Serial.print(", ");
           Serial.print(ypr[2] * 180/M_PI);
-          Serial.println(", ");
     
-          // output to server
-          client.print("areal, ");
+          // Accel without gravity: to server
+          client.print(", areal, ");
           client.print(aaReal.x);
           client.print(", ");
           client.print(aaReal.y);
           client.print(", ");
-          client.println(aaReal.z);
+          client.print(aaReal.z);
           
-          // output to Serial Monitior
-          /*Serial.print("areal, ");
+          // Accel without gravity: to Serial Monitior
+          Serial.print(", areal, ");
           Serial.print(aaReal.x);
           Serial.print(", ");
           Serial.print(aaReal.y);
           Serial.print(", ");
-          Serial.println(aaReal.z);*/
+          Serial.print(aaReal.z);
+
+          // Accel: to server
+          client.print(", accel, ");
+          client.print(aa.x);
+          client.print(", ");
+          client.print(aa.y);
+          client.print(", ");
+          client.print(aa.z);
+          
+          // Accel: to Serial Monitior
+          Serial.print(", accel, ");
+          Serial.print(aa.x);
+          Serial.print(", ");
+          Serial.print(aa.y);
+          Serial.print(", ");
+          Serial.print(aa.z);
+
+          // Gyro: to server
+          client.print(", gyro, ");
+          client.print(gy.x);
+          client.print(", ");
+          client.print(gy.y);
+          client.print(", ");
+          client.println(gy.z);
+          
+          // Gyro: to Serial Monitior
+          Serial.print(", gyro, ");
+          Serial.print(gy.x);
+          Serial.print(", ");
+          Serial.print(gy.y);
+          Serial.print(", ");
+          Serial.println(gy.z);
      }
    }
 }
