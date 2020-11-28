@@ -2,13 +2,11 @@
 Visualizes Data obtained from DataCollection_Client.py. Plots data (accelerometer and orientation calculated with DMP) as well as timestamps of crashes as marked by DataCollection_Client.py.
 """
 
-
+import sys
+import os
+from datetime import datetime
 import matplotlib.gridspec as gridspec  # for subplot organisation
 from matplotlib import pyplot as plt
-from datetime import datetime
-import sys
-
-
 
 		
 		
@@ -22,17 +20,51 @@ if __name__ == "__main__":
 	data = {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}}
 	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 	
-	# Kommandozeilen Argumente
+	# commandline parameters
 	if len(sys.argv) > 1:
 		print( "{} Dateien:\n{}".format(len(sys.argv)-1, '\n'.join(sys.argv[1:])) )
 		filename = sys.argv[1]
 	else:
-		filename = input("Input CSV-File with Sensor Data:")
+		filename = input("Input CSV-File with Sensor Data. Leave empty to load last modified.\n")
+		# find last modified file?
+		if not filename.strip():
+			lastDate = 0
+			lastFile = ""
+			# get last modified date of files (in sec since epoche)
+			for root, dirs, files in os.walk(".", topdown=False):
+				for name in files:
+					if name[-4:] == ".txt":
+						fileDate = os.path.getmtime(os.path.join(root, name))
+						if fileDate > lastDate:
+							lastDate = fileDate
+							lastFile = os.path.join(root, name)
+		# verify file
+		elif not os.path.isfile(filename):
+			nameWOpath = os.path.basename(filename)
+			logFolder = "./logs/"
+			# correct folder
+			if os.path.isfile(logFolder + nameWOpath):
+				filename = logFolder + nameWOpath
+			# correct file-ending
+			elif os.path.isfile(filename + ".txt"):
+				filename = filename + ".txt"
+			elif os.path.isfile(filename + ".csv"):
+				filename = filename + ".csv"
+			# correct both
+			elif os.path.isfile(logFolder + nameWOpath + ".txt"):
+				filename = logFolder + nameWOpath + ".txt"
+			elif os.path.isfile(logFolder + nameWOpath + ".csv"):
+				filename = logFolder + nameWOpath + ".csv"
+			# no match, restart
+			else:
+				input("File was not found! Please close by pressing enter and then restart.")
+				sys.exit()
 	
 	# read files
 	with open(filename, "r") as d_log:
 		data_log = d_log.readlines()
-	with open(filename.split(".")[0] + "_timestamps." + filename.split(".")[-1], "r") as c_log:
+	#with open(filename.split(".")[-2] + "_timestamps." + filename.split(".")[-1], "r") as c_log:
+	with open(filename.replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "r") as c_log:
 		crash_log = c_log.readlines()
 
 	# prepare data
