@@ -10,16 +10,8 @@ from matplotlib import pyplot as plt
 
 		
 		
-if __name__ == "__main__":
-	areal = 'areal'
-	ypr = 'ypr'
-	t = 't'
-	x = 'x'
-	y = 'y'
-	z = 'z'
-	data = {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}}
-	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
-	
+def getFilename():
+	""" Gets the path to a file. Checks for a commmand line argument and prompts the user otherwise. Entering nothing will get the last modified file from a './logs/' folder. A requested file is searched in all nested folders beginning at the location of this file and fileendings .txt and .cvs may be omitted."""
 	# commandline parameters
 	if len(sys.argv) > 1:
 		print( "{} Dateien:\n{}".format(len(sys.argv)-1, '\n'.join(sys.argv[1:])) )
@@ -38,7 +30,10 @@ if __name__ == "__main__":
 						if fileDate > lastDate:
 							lastDate = fileDate
 							lastFile = os.path.join(root, name)
-		# verify file
+			filename = lastFile
+			print("Opening last modified File: ", os.path.basename(filename))
+			
+		# verify and correct given file
 		elif not os.path.isfile(filename):
 			nameWOpath = os.path.basename(filename)
 			logFolder = "./logs/"
@@ -57,8 +52,24 @@ if __name__ == "__main__":
 				filename = logFolder + nameWOpath + ".csv"
 			# no match, restart
 			else:
-				input("File was not found! Please close by pressing enter and then restart.")
-				sys.exit()
+				input("File was not found! Please enter a valid .csv or .txt log file. ")
+				return getFilename()
+				
+	return filename
+
+
+if __name__ == "__main__":
+	areal = 'areal'
+	ypr = 'ypr'
+	t = 't'
+	x = 'x'
+	y = 'y'
+	z = 'z'
+	data = {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}}
+	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
+	
+	# get file of wanted data
+	filename = getFilename()
 	
 	# read files
 	with open(filename, "r") as d_log:
