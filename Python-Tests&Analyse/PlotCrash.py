@@ -1,4 +1,9 @@
 """
+General:
+Asks for a .txt or .csv file of logged data in the form of: "timestamp(%Y-%m-%d_%H-%M-%S-%f),  descriptor_1, x_1, y_1, z_1,  descriptor_2, x_2, y_2, z_2,  ... \n"
+The x,y and z data for each descriptor is plotted over time. x,y and z are not combined into one Graph.
+A second file (same name as data file with "_timestamp" appended) is read. It contains timestamps that are marked in the other plots as red lines.
+Used for:
 Visualizes Data obtained from DataCollection_Client.py. Plots data (accelerometer and orientation calculated with DMP) as well as timestamps of crashes as marked by DataCollection_Client.py.
 """
 
@@ -25,7 +30,7 @@ def getFilename():
 			# get last modified date of files (in sec since epoche)
 			for root, dirs, files in os.walk(".", topdown=False):
 				for name in files:
-					if name[-4:] == ".txt":
+					if name[-4:] == ".txt" and "_timestamp" not in name:
 						fileDate = os.path.getmtime(os.path.join(root, name))
 						if fileDate > lastDate:
 							lastDate = fileDate
@@ -58,15 +63,16 @@ def getFilename():
 	return filename
 
 
+def isfloat(value):
+	"""Returns True if String can be converted into a float and False if not."""
+	try:
+		float(value)
+		return True
+	except ValueError:
+		return False
+
+
 if __name__ == "__main__":
-	areal = 'areal'
-	ypr = 'ypr'
-	t = 't'
-	x = 'x'
-	y = 'y'
-	z = 'z'
-	data = {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}}
-	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 	
 	# get file of wanted data
 	filename = getFilename()
@@ -74,7 +80,6 @@ if __name__ == "__main__":
 	# read files
 	with open(filename, "r") as d_log:
 		data_log = d_log.readlines()
-	#with open(filename.split(".")[-2] + "_timestamps." + filename.split(".")[-1], "r") as c_log:
 	with open(filename.replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "r") as c_log:
 		crash_log = c_log.readlines()
 
@@ -83,16 +88,30 @@ if __name__ == "__main__":
 		data_log.remove('\n')
 	while '' in data_log:
 		data_log.remove('')
+		
+	# ready data storage in RAM
+	# get dataTypes out of first line in log (excluding timestamp at first position)
+	dataTypes = [element.strip() for element in data_log[0].split(',')[1:] if not isfloat(element.strip()) ] #['areal', 'ypr', 'accel', 'gyro']
+	print("Data Types:", dataTypes)
+	t = 't'
+	x = 'x'
+	y = 'y'
+	z = 'z'
+	data = {t:[]} # Final Format:  {t:[], ypr:{x:[], y:[], z:[]}, areal:{x:[], y:[], z:[]}, ...}
+	for dataType in dataTypes:
+		data[dataType] = {x:[], y:[], z:[]}
+	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 	
 	# convert read date
 	partLine = ""
 	tOffset = None
+	lineLength = len(data_log[0].split(','))
 	for raw_line in data_log:
 		try:
 			line = raw_line.split(',')
 			# attempt to merge lines that were split
-			if len(line)<9:
-				print("len(line)", len(line), raw_line)
+			if len(line)<lineLength:
+				print("Can't process line of length:", len(line), raw_line)
 				if partLine:
 					line = partLine.split(',') + raw_line.split(',')
 				else:
@@ -109,40 +128,36 @@ if __name__ == "__main__":
 				tOffset = datetime.strptime(line[0], dateFormat)
 			
 			# convert and store
-			data[ypr][x].append(float(line[2]))
-			data[ypr][y].append(float(line[3]))
-			data[ypr][z].append(float(line[4]))
-			data[areal][x].append(int(line[6]))
-			data[areal][y].append(int(line[7]))
-			data[areal][z].append(int(line[8]))
+			idx_in_line = 2
+			for dataType in dataTypes:
+				data[dataType][x].append(float(line[idx_in_line]))
+				data[dataType][y].append(float(line[idx_in_line+1]))
+				data[dataType][z].append(float(line[idx_in_line+2]))
+				idx_in_line += 4 # offset 3 values and 1 title
+
 		except Exception as error:
 			print(error, "WITH LINE:", raw_line)
 
 	# setup plots
 	fig = plt.figure()
-	grid = gridspec.GridSpec(ncols=1, nrows=2)
-	ax1 = fig.add_subplot(grid[0,0]) #111)
-	ax2 = fig.add_subplot(grid[1,0]) #212)
-	
-	ax1.set_title(ypr)
-	ax2.set_title(areal)
+	grid = gridspec.GridSpec(ncols=1, nrows=len(dataTypes))
 	
 	# plot data
-	ax1.plot(data[t], data[ypr][x])
-	ax1.plot(data[t], data[ypr][y])
-	ax1.plot(data[t], data[ypr][z])
-	ax2.plot(data[t], data[areal][x])
-	ax2.plot(data[t], data[areal][y])
-	ax2.plot(data[t], data[areal][z])
+	ax = {} #axis that hold plot
+	for idx, dataType in enumerate(dataTypes):
+		ax[dataType] = fig.add_subplot(grid[idx,0]) #111)
+		ax[dataType].set_title(dataType)
+		
+		ax[dataType].plot(data[t], data[dataType][x])
+		ax[dataType].plot(data[t], data[dataType][y])
+		ax[dataType].plot(data[t], data[dataType][z])
 
 	# add crash timestamps
-	ymin_ax1 = max( max(data[ypr][x]) , max(data[ypr][y]) , max(data[ypr][z]) )
-	ymax_ax1 = min( min(data[ypr][x]) , min(data[ypr][y]) , min(data[ypr][z]) )
-	ymin_ax2 = max( max(data[areal][x]) , max(data[areal][y]) , max(data[areal][z]) )
-	ymax_ax2 = min( min(data[areal][x]) , min(data[areal][y]) , min(data[areal][z]) )
 	for tstamp in crash_log:
 		tsec = (datetime.strptime(tstamp.strip(), dateFormat) - tOffset).total_seconds()
-		ax1.vlines(tsec, ymin_ax1, ymax_ax1, colors='r', linestyles='solid', label='Crash')
-		ax2.vlines(tsec, ymin_ax2, ymax_ax2, colors='r', linestyles='solid', label='Crash')
+		for dataType in dataTypes:
+			ymin = max( max(data[dataType][x]) , max(data[dataType][y]) , max(data[dataType][z]) )
+			ymax = min( min(data[dataType][x]) , min(data[dataType][y]) , min(data[dataType][z]) )
+			ax[dataType] .vlines(tsec, ymin, ymax, colors='r', linestyles='solid', label='Crash')
 		
 	plt.show()
