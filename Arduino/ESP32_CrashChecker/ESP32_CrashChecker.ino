@@ -1,30 +1,32 @@
+#include <CircularBuffer.h> //https://github.com/rlogiacco/CircularBuffer
 #include <WiFi.h>
 #include <I2Cdev.h>
 #include "MPU6050_6Axis_MotionApps20.h"
 #include <Wire.h>
 
+
 // Switch between evaluation modes
 #define EVAL_DISCRETE
 //#define EVAL_CONTINUOUS
 
-// Parameters to tune
-float GYRO_EXP_DECLINE_FACTOR = 0.1;
-int   FIFO_INT_LENGTH_BIG = 100;
-int   FIFO_INT_LENGTH_SHORT = 40;
+// Parameters to tune (initial guess)
+const float GYRO_EXP_DECLINE_FACTOR = 0.1;// (0.1)
+const int FIFO_INT_LENGTH_BIG = 20;      // (20)
+const int FIFO_INT_LENGTH_SHORT = 8;     // (8)
 // Thresholds  to tune
-float THRESHOLD_SMOOTH_GYRO_X = 1;
-float THRESHOLD_SMOOTH_GYRO_Y = 1;
-float THRESHOLD_SMOOTH_GYRO_Z = 1;
-float THRESHOLD_YAW = 360;
-float THRESHOLD_PITCH = 50;
-float THRESHOLD_ROLL = 50;
-int   THRESHOLD_INT_ACCEL_X = 50;
-int   THRESHOLD_INT_ACCEL_Y = 50;
-int   THRESHOLD_INT_ACCEL_Z = 50;
-int   THRESHOLD_INT_GRAVITY_X = 1;
-int   THRESHOLD_INT_GRAVITY_Y = 1;
-int   THRESHOLD_INT_GRAVITY_Z = 1;
-int   COMMON_GRAVITY_Z = 1000;
+const float THRESHOLD_SMOOTH_GYRO_X = 1; // (1)
+const float THRESHOLD_SMOOTH_GYRO_Y = 1; // (1)
+const float THRESHOLD_SMOOTH_GYRO_Z = 1; // (1)
+const float THRESHOLD_YAW = 360;         // (360)
+const float THRESHOLD_PITCH = 50;        // (50)
+const float THRESHOLD_ROLL = 50;         // (50)
+const int   THRESHOLD_INT_ACCEL_X = 50;  // (50)
+const int   THRESHOLD_INT_ACCEL_Y = 50;  // (50)
+const int   THRESHOLD_INT_ACCEL_Z = 50;  // (50)
+const int   THRESHOLD_INT_GRAVITY_X = 1; // (1)
+const int   THRESHOLD_INT_GRAVITY_Y = 1; // (1)
+const int   THRESHOLD_INT_GRAVITY_Z = 1; // (1)
+const int   COMMON_GRAVITY_Z = 1000;     // (1000)
 // continuous calc variables
 float  ypr_eval;
 float  gyro_eval;
@@ -35,6 +37,11 @@ double delta_y;
 double delta_z;
 double continuous_rating = 0.0;
 double normalized_continuous_rating = 0.0;
+// hold past data to filter
+CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aaReal;
+CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aa;
+VectorInt16 last_aaReal;
+VectorInt16 last_aa;
 
 // Further processed data
 VectorInt16 accelIntegral;
@@ -177,22 +184,25 @@ void getSensorReadings() {
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
 
-  // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG)
-  //// fifo_aaReal.add(aaReal);
-  //// last_aaReal = fifo_aaReal.pop();
-
-  // integrate acceleration over the last fraction of a second: add newest, remove oldest value
-  /*https://github.com/rlogiacco/CircularBuffer
+  // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG) (Exponential Moving Average possible?)
+  if (fifo_aaReal.isFull()){
+    last_aaReal = fifo_aaReal.shift();
+    // integrate acceleration over the last fraction of a second: add newest, remove oldest value
     accelIntegral.x = accelIntegral.x + aaReal.x - last_aaReal.x;
     accelIntegral.y = accelIntegral.y + aaReal.y - last_aaReal.y;
     accelIntegral.z = accelIntegral.z + aaReal.z - last_aaReal.z;
+  }
+  if (fifo_aa.isFull()){
+    last_aa = fifo_aa.shift();    
     // Accel with Gravity
     accelGravityIntegral.x = accelGravityIntegral.x + aa.x - last_aa.x;
     accelGravityIntegral.y = accelGravityIntegral.y + aa.y - last_aa.y;
     accelGravityIntegral.z = accelGravityIntegral.z + aa.z - last_aa.z;
-  */
-
-  // Filter gyro data (exponetial decline as time proceeds)
+  }
+  fifo_aaReal.push(aaReal);
+  fifo_aa.push(aa);
+  
+  // Filter gyro data (Exponential Moving Average)
   gyroSmoothend.x = gyroSmoothend.x * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.x * GYRO_EXP_DECLINE_FACTOR;
   gyroSmoothend.y = gyroSmoothend.y * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.y * GYRO_EXP_DECLINE_FACTOR;
   gyroSmoothend.z = gyroSmoothend.z * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.z * GYRO_EXP_DECLINE_FACTOR;
