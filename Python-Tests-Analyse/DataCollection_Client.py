@@ -13,7 +13,7 @@ def callback_button(stamp_log):
 if __name__ == "__main__":
 	try:
 		# choose file to save to
-		logname = "logs/dataLog_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+		logname = "logs/" + input("Enter description of test for filename:") + "_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 		log = open(logname + ".txt", "w")
 		stamp_log = open(logname + "_timestamps" + ".txt", "w")
 		
