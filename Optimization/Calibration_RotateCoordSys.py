@@ -1,20 +1,22 @@
 """
-General:
-Asks for a .txt or .csv file of logged data in the form of: "timestamp(%Y-%m-%d_%H-%M-%S-%f),  descriptor_1, x_1, y_1, z_1,  descriptor_2, x_2, y_2, z_2,  ... \n"
-The x,y and z data for each descriptor is plotted over time. x,y and z are not combined into one Graph.
-A second file (same name as data file with "_timestamp" appended) is read. It contains timestamps that are marked in the other plots as red lines.
-Used for:
-Visualizes Data obtained from DataCollection_Client.py. Plots data (accelerometer and orientation calculated with DMP) as well as timestamps of crashes as marked by DataCollection_Client.py.
-"""
 
+"""
+import math
 import sys
 import os
 from datetime import datetime
-import matplotlib.gridspec as gridspec  # for subplot organisation
-from matplotlib import pyplot as plt
 
-		
-		
+
+def rotateZ(angle, point):
+	"""
+	Rotate a point around the Z-Axis by the angle phi in degrees. Returns the rotated point as a tuple. Works with both 2D and 3D points.
+	"""
+	radAngle = math.radians(angle)
+	x = math.cos(radAngle)*point[0] - math.sin(radAngle)*point[1]
+	y = math.sin(radAngle)*point[0] + math.cos(radAngle)*point[1]
+	return (x, y, point[2]) if len(point)==3 else (x, y)
+
+
 def getFilename(logFolder="./logs/"):
 	""" Gets the path to a file. Checks for a commmand line argument and prompts the user otherwise. Entering nothing will get the last modified file from a './logs/' folder. A requested file is searched in all nested folders beginning at the location of this file and fileendings .txt and .cvs may be omitted."""
 	# commandline parameters
@@ -60,16 +62,7 @@ def getFilename(logFolder="./logs/"):
 				return getFilename()
 				
 	return filename
-
-
-def isfloat(value):
-	"""Returns True if String can be converted into a float and False if not."""
-	try:
-		float(value)
-		return True
-	except ValueError:
-		return False
-
+	
 
 def readData(data_log):
 	"""
@@ -134,43 +127,44 @@ def readData(data_log):
 			print(error, "WITH LINE:", raw_line)
 	return data, dataTypes
 
-if __name__ == "__main__":
-	t = 't'
-	x = 'x'
-	y = 'y'
-	z = 'z'
-	# get file of wanted data
-	filename = getFilename()
-	
-	# read files
-	with open(filename, "r") as d_log:
-		data_log = d_log.readlines()
-	with open(filename.replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "r") as c_log:
-		crash_log = c_log.readlines()
 
+def isfloat(value):
+	"""Returns True if String can be converted into a float and False if not."""
+	try:
+		float(value)
+		return True
+	except ValueError:
+		return False
+
+if __name__ == "__main__":
+	x, y, z = 'x', 'y', 'z'
+	angleResolution = 10
+	# get file of wanted data
+	filename = getFilename(logFolder="../Python-Tests-Analyse/logs/")
+	
+	# read calibration file with known rotation around the y-axis we want
+	with open(filename, "r") as f:
+		data_log = f.readlines()
+	
 	# prepare and convert data
 	data, dataTypes = readData(data_log)
 
-	# setup plots
-	fig = plt.figure()
-	grid = gridspec.GridSpec(ncols=1, nrows=len(dataTypes))
+	# average gyro
+	gyroVec = {x:0, y:0, z:0}
+	for xyz in ['x', 'y', 'z']:
+		gyroVec[xyz] = sum(data['gyro'][xyz])/len(data['gyro'][xyz])
+	print("gyroVec: ", gyroVec)
 	
-	# plot data
-	ax = {} #axis that hold plot
-	for idx, dataType in enumerate(dataTypes):
-		ax[dataType] = fig.add_subplot(grid[idx,0]) #111)
-		ax[dataType].set_title(dataType)
-		
-		ax[dataType].plot(data[t], data[dataType][x])
-		ax[dataType].plot(data[t], data[dataType][y])
-		ax[dataType].plot(data[t], data[dataType][z])
-
-	# add crash timestamps
-	for tstamp in crash_log:
-		tsec = (datetime.strptime(tstamp.strip(), dateFormat) - tOffset).total_seconds()
-		for dataType in dataTypes:
-			ymin = max( max(data[dataType][x]) , max(data[dataType][y]) , max(data[dataType][z]) )
-			ymax = min( min(data[dataType][x]) , min(data[dataType][y]) , min(data[dataType][z]) )
-			ax[dataType] .vlines(tsec, ymin, ymax, colors='r', linestyles='solid', label='Crash')
-		
-	plt.show()
+	# try multiple rotation angles
+	bestPhi, bestResult = None, -math.inf
+	for phi in [p/angleResolution for p in range(0, 360*angleResolution)]:
+		# rotate input
+		rotGyroVec = rotateZ(phi, (gyroVec[x], gyroVec[y], gyroVec[z]))
+		ratioY = rotGyroVec[1]/(rotGyroVec[0]+rotGyroVec[2])
+		print("phi: {:5.1f}, rotated Y: {:7.2f}, rotated Y ratio: {:5.2f}, \t".format(phi, rotGyroVec[1], ratioY), "#"*int(rotGyroVec[1]*10))
+		# test result
+		if ratioY > bestResult:
+			bestPhi, bestResult = phi, ratioY
+			print("  # better than last best")
+	
+	print("\n Best angle of rotation about Z-Axis to maximise Y Komponent: ", bestPhi)
