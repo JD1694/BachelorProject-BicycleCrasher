@@ -152,19 +152,20 @@ if __name__ == "__main__":
 	# average gyro
 	gyroVec = {x:0, y:0, z:0}
 	for xyz in ['x', 'y', 'z']:
-		gyroVec[xyz] = sum(data['gyro'][xyz])/len(data['gyro'][xyz])
-	print("gyroVec: ", gyroVec)
+		gyroVec[xyz] = sum([abs(value) for value in data['gyro'][xyz]])/len(data['gyro'][xyz])
+	print("average of all gyro readings in file: ", gyroVec)
 	
 	# try multiple rotation angles
 	bestPhi, bestResult = None, -math.inf
 	for phi in [p/angleResolution for p in range(0, 360*angleResolution)]:
 		# rotate input
 		rotGyroVec = rotateZ(phi, (gyroVec[x], gyroVec[y], gyroVec[z]))
-		ratioY = rotGyroVec[1]/(rotGyroVec[0]+rotGyroVec[2])
+		ratioY = abs(rotGyroVec[1])/(abs(rotGyroVec[0])+abs(rotGyroVec[2]))
 		print("phi: {:5.1f}, rotated Y: {:7.2f}, rotated Y ratio: {:5.2f}, \t".format(phi, rotGyroVec[1], ratioY), "#"*int(rotGyroVec[1]*10))
 		# test result
 		if ratioY > bestResult:
 			bestPhi, bestResult = phi, ratioY
 			print("  # better than last best")
 	
-	print("\n Best angle of rotation about Z-Axis to maximise Y Komponent: ", bestPhi)
+	print("\nBest angle of rotation about Z-Axis to maximise Y Komponent: ", bestPhi)
+	input("Press enter to end programm...")
