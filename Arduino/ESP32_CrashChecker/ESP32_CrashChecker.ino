@@ -69,6 +69,12 @@ VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measure
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+// rotated to new coord sys
+float rotateZAngle = 1.0;   // Angle to rotate sensor coord sys into fixed coord sys
+VectorFloat aa_rot;         // [x, y, z]            accel sensor measurements
+VectorFloat gy_rot;         // [x, y, z]            gyro sensor measurements
+VectorFloat aaReal_rot;     // [x, y, z]            gravity-free accel sensor measurements
+float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 // constants to connect to web
 const char *ssid = "myGate";
@@ -97,11 +103,13 @@ void setup() {
   Serial.println(F("Initializing DMP..."));
   devStatus = mpu.dmpInitialize();
 
-  // gyro offsets here, scaled for min sensitivity
-  mpu.setXGyroOffset(-56); //(220);
-  mpu.setYGyroOffset(39); //(76);
-  mpu.setZGyroOffset(-15); //(-85);
-  mpu.setZAccelOffset(2925); //(1788);
+    // gyro offsets here, scaled for min sensitivity
+    mpu.setXGyroOffset(-38); // (-56); //(220);
+    mpu.setYGyroOffset(35); // (39); //(76);
+    mpu.setZGyroOffset(4); // (-15); //(-85);
+    mpu.setXAccelOffset(-2576);
+    mpu.setYAccelOffset(-4021);
+    mpu.setZAccelOffset(2101); // (2925); //(1788);
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
@@ -183,6 +191,12 @@ void getSensorReadings() {
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
+  // rotate used sensor data to new cood system
+  rotateZ( rotateZAngle, aa, &aa_rot );
+  rotateZ( rotateZAngle, aaReal, &aaReal_rot );
+  rotateZ( rotateZAngle, gy, &gy_rot );
+  rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+
 
   // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG) (Exponential Moving Average possible?)
   if (fifo_aaReal.isFull()){
@@ -296,4 +310,21 @@ double sigmoid_function(double x){
    *  Returns results between 0 (for very negative x) and 1 (for very positive x) 
    *  centered around x=0 where 0.5 is returned*/
    return x / (2*(1 + abs(x))) + 0.5;
+}
+
+void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ){
+  VectorFloat returnVal;
+  returnVal.x = cos(radAngle)*point.x - sin(radAngle)*point.y;
+  returnVal.y = sin(radAngle)*point.x + cos(radAngle)*point.y;
+  *rotatedPoint = returnVal;
+  delete &returnVal;
+  return;
+}
+
+void rotateZ(float radAngle, float point[3], float *rotatedPoint ){
+  /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
+  *rotatedPoint     = cos(radAngle)*point[0] - sin(radAngle)*point[1];
+  *(rotatedPoint+1) = sin(radAngle)*point[0] + cos(radAngle)*point[1];
+  *(rotatedPoint+2) = point[2];
+  return;
 }
