@@ -13,42 +13,20 @@
 using namespace std;
 
 
+float THRESHOLD_SMOOTH_GYRO_X;
+float THRESHOLD_SMOOTH_GYRO_Y;
 
-int main(int argc, char *argv[]){
-
-
-
-
-const float GYRO_EXP_DECLINE_FACTOR= 0.1;
-const int   FIFO_INT_LENGTH_BIG= 20;
-const int FIFO_INT_LENGTH_SHORT = 8;
-// Thresholds  to tune
-extern float THRESHOLD_SMOOTH_GYRO_X;
-THRESHOLD_SMOOTH_GYRO_X = stof(argv[2]);
-extern float THRESHOLD_SMOOTH_GYRO_Y;
-THRESHOLD_SMOOTH_GYRO_Y = stof(argv[3]);
-extern float THRESHOLD_SMOOTH_GYRO_Z;
-THRESHOLD_SMOOTH_GYRO_Z = stof(argv[4]);
-extern float THRESHOLD_YAW;
-THRESHOLD_YAW = stof(argv[5]);
-extern float THRESHOLD_PITCH;
-THRESHOLD_PITCH = stof(argv[6]);
-extern float THRESHOLD_ROLL;
-THRESHOLD_ROLL = stof(argv[7]);
-extern int   THRESHOLD_INT_ACCEL_X;
-THRESHOLD_INT_ACCEL_X = stoi(argv[8]);
-extern int   THRESHOLD_INT_ACCEL_Y;
-THRESHOLD_INT_ACCEL_Y = stoi(argv[9]);
-extern int   THRESHOLD_INT_ACCEL_Z;
-THRESHOLD_INT_ACCEL_Z = stoi(argv[10]);
-extern int   THRESHOLD_INT_GRAVITY_X;
-THRESHOLD_INT_GRAVITY_X = stoi(argv[11]);
-extern int   THRESHOLD_INT_GRAVITY_Y;
-THRESHOLD_INT_GRAVITY_Y = stoi(argv[12]);
-extern int   THRESHOLD_INT_GRAVITY_Z;
-THRESHOLD_INT_GRAVITY_Z = stoi(argv[13]);
-extern int   COMMON_GRAVITY_Z;
-COMMON_GRAVITY_Z = 1000;
+float THRESHOLD_YAW;
+float THRESHOLD_SMOOTH_GYRO_Z;
+float THRESHOLD_PITCH;
+float THRESHOLD_ROLL;
+int   THRESHOLD_INT_ACCEL_X;
+int   THRESHOLD_INT_ACCEL_Y;
+int   THRESHOLD_INT_ACCEL_Z;
+int   THRESHOLD_INT_GRAVITY_X;
+int   THRESHOLD_INT_GRAVITY_Y;
+int   THRESHOLD_INT_GRAVITY_Z;
+int   COMMON_GRAVITY_Z;
 // continuous calc variables
 float  ypr_eval;
 float  gyro_eval;
@@ -59,11 +37,73 @@ double delta_y;
 double delta_z;
 double continuous_rating = 0.0;
 double normalized_continuous_rating = 0.0;
-
 // Further processed data
 VectorInt16 accelIntegral;
 VectorInt16 accelGravityIntegral;
 VectorFloat gyroSmoothend;
+const float GYRO_EXP_DECLINE_FACTOR= 0.1;
+const int   FIFO_INT_LENGTH_BIG= 20;
+const int FIFO_INT_LENGTH_SHORT = 8;
+
+// hold past data to filter
+CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aaReal;
+CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aa;
+VectorInt16 last_aaReal;
+VectorInt16 last_aa;
+
+// Data from sensor
+Quaternion q;           // [w, x, y, z]         quaternion container
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity;    // [x, y, z]            gravity vector
+float euler[3];         // [psi, theta, phi]    Euler angle container
+float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+
+list<vector<string>> sensorDataGetter(string argument);
+void getSensorReadings(vector<string> currentData);
+void output(string timestamp);
+void prepareData();
+bool evalDiscrete();
+double evalContinuous();
+double norm(double a, double b, double c);
+double sigmoid_function(double x);
+
+
+
+
+int main(int argc, char *argv[]){
+// Thresholds  to tune
+
+THRESHOLD_SMOOTH_GYRO_X = stof(argv[2]);
+
+THRESHOLD_SMOOTH_GYRO_Y = stof(argv[3]);
+
+THRESHOLD_SMOOTH_GYRO_Z = stof(argv[4]);
+
+THRESHOLD_YAW = stof(argv[5]);
+
+THRESHOLD_PITCH = stof(argv[6]);
+
+THRESHOLD_ROLL = stof(argv[7]);
+
+THRESHOLD_INT_ACCEL_X = stoi(argv[8]);
+
+THRESHOLD_INT_ACCEL_Y = stoi(argv[9]);
+
+THRESHOLD_INT_ACCEL_Z = stoi(argv[10]);
+
+THRESHOLD_INT_GRAVITY_X = stoi(argv[11]);
+
+THRESHOLD_INT_GRAVITY_Y = stoi(argv[12]);
+
+THRESHOLD_INT_GRAVITY_Z = stoi(argv[13]);
+
+COMMON_GRAVITY_Z = 1000;
+
+
+
 
 // return from evaluation
 bool   crashYesNo = false;
@@ -77,23 +117,14 @@ uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 
-// Data from sensor
-Quaternion q;           // [w, x, y, z]         quaternion container
-extern VectorInt16 aa;         // [x, y, z]            accel sensor measurements
-extern VectorInt16 gy;         // [x, y, z]            gyro sensor measurements
-extern VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
-VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
-extern VectorFloat gravity;    // [x, y, z]            gravity vector
-float euler[3];         // [psi, theta, phi]    Euler angle container
-extern float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 string filename(argv[1]);
 list<vector<string>> sensorDataList=sensorDataGetter(filename);
-
-for (auto &const sensorData:sensorDataList){
+string sizeoflist=to_string(sensorDataList.size());
+for (auto  sensorData:sensorDataList){
 	// Get sensor readings
-  getSensorReadings(sensorData, &aa, &gy, &aaReal,&gravity,ypr);
-
+  getSensorReadings(sensorData);
+  
   // Prepare data, filter and convert to get more measurable input
   prepareData();
 
@@ -111,12 +142,12 @@ for (auto &const sensorData:sensorDataList){
 
 vector<int> t;
 
-  crashPropability = evalContinuous();
-
+crashPropability = evalContinuous();
 
   // Reaction
   if (crashPropability > 0.5) {
     output(sensorData[0]);
+    return 0;
   }
 
 
@@ -125,7 +156,6 @@ vector<int> t;
 
   return 0;
 }
-
 
 
 list<vector<string>> sensorDataGetter(string argument){
@@ -158,37 +188,40 @@ ifstream input(filename);
 	  		linestr<<line;
 	  		while(getline(linestr,segment,',')){		//splits lines into single strings with data
 				  segment.erase(remove_if(segment.begin(),segment.end(),[](unsigned char x){return std::isspace(x);}),segment.end());
-				  dataText.push_back(segment);
+          dataText.push_back(segment);
 	  		}
-		if(dataText.size()<17){
+      if(dataText.size()==17){  //checks if vector has 17 entries to prevent out of bounds errors
 			dataTextList.push_back(dataText);
-		}
+      }
 	  }
   }
+  return dataTextList;
 }
 
 
 
-void getSensorReadings(vector<string> currentData, VectorInt16* aa, VectorInt16* gy, VectorInt16* aaReal,VectorFloat* gravity,float ypr[3]) {
+void getSensorReadings(vector<string> currentData) {
 
-aa->x=stoi(currentData[10]);
-aa->y=stoi(currentData[11]);
-aa->z=stoi(currentData[12]);         // [x, y, z]            accel sensor measurements
-gy->x=stoi(currentData[14]);
-gy->y=stoi(currentData[15]);
-gy->z=stoi(currentData[16]);         // [x, y, z]            gyro sensor measurements
-aaReal->x=stoi(currentData[6]);
-aaReal->y=stoi(currentData[7]);
-aaReal->z=stoi(currentData[8]);     // [x, y, z]            gravity-free accel sensor measurements
+aa.x=stoi(currentData[10]);
+aa.y=stoi(currentData[11]);
+aa.z=stoi(currentData[12]);         // [x, y, z]            accel sensor measurements
+gy.x=stoi(currentData[14]);
+gy.y=stoi(currentData[15]);
+gy.z=stoi(currentData[16]);         // [x, y, z]            gyro sensor measurements
+aaReal.x=stoi(currentData[6]);
+aaReal.y=stoi(currentData[7]);
+aaReal.z=stoi(currentData[8]);     // [x, y, z]            gravity-free accel sensor measurements
 gravity;    // [x, y, z]            gravity vector
 ypr[0]=stof(currentData[2]);
 ypr[1]=stof(currentData[3]);
 ypr[2]=stof(currentData[4]);
+
 }
 
 void output(string timestamp) {
   cout<<timestamp;
 }
+
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
@@ -216,6 +249,7 @@ void prepareData() {
   gyroSmoothend.y = gyroSmoothend.y * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.y * GYRO_EXP_DECLINE_FACTOR;
   gyroSmoothend.z = gyroSmoothend.z * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.z * GYRO_EXP_DECLINE_FACTOR;
 }
+
 
 bool evalDiscrete() {
   /* Evaluate inputs into discrete categories: Crash and Safe */
@@ -250,6 +284,7 @@ bool evalDiscrete() {
   return false;
 }
 
+
 double evalContinuous() {
   /* Evaluate inputs into continuous categories: Propability of Crash */
   /* Notes: square may not have methods in arg*/
@@ -257,8 +292,8 @@ double evalContinuous() {
 
   // Absolute Angle
   delta_x = abs(ypr[0] * 180 / M_PI) - THRESHOLD_YAW; ///// evtl y-p-r vertauscht///// change to rad for more efficienty
-  delta_y = abs(ypr[0] * 180 / M_PI) - THRESHOLD_PITCH;
-  delta_z = abs(ypr[0] * 180 / M_PI) - THRESHOLD_ROLL;
+  delta_y = abs(ypr[1] * 180 / M_PI) - THRESHOLD_PITCH;
+  delta_z = abs(ypr[2] * 180 / M_PI) - THRESHOLD_ROLL;
   ypr_eval = norm(delta_x, delta_y, delta_z);
 
   // Rate of rotation
@@ -287,10 +322,12 @@ double evalContinuous() {
   return sigmoid_function(continuous_rating/normalized_continuous_rating - 1);
 }
 
+
 double norm(double a, double b, double c){
   /* Calculates the euclidian norm of a vektor consisting of the 3 given values*/
-  return sqrt( sqrt(delta_x) + sqrt(delta_y) + sqrt(delta_z) );
+  return sqrt( (a*a) +(b*b) + (c*c) );
 }
+
 
 double sigmoid_function(double x){
   /* 
