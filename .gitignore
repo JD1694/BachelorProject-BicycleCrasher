@@ -1,2 +1,4 @@
 __pycache__/
 Python-Tests-Analyse/logs/*.mp4
+Optimization/*.exe
+Optimization/*.obj
