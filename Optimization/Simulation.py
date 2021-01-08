@@ -59,7 +59,7 @@ def antiFalsePositive(secondsLeft):
 	""" Used in case of a log file without a crash. Generally negative when a crash is detected nevertheless. 
 	More points are given, the later the false positive is made. 
 	Param: seconds left from timestamp of detecetion until EOF (End Of File)"""
-	return -0.05 * secondsLeft
+	return -100 * secondsLeft
 
 
 def printDebug(debug, *strings):
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 	##filelist.append(normalDrivingLog)
 	
 	# most log files are flawed, use manual chosen files instead
-	filelist = [crashLog2, crashLog2, normalDrivingLog]
+	filelist = [crashLog1, crashLog2, normalDrivingLog]
 	
 	
 	for filename in filelist:
@@ -103,6 +103,8 @@ if __name__ == "__main__":
 		
 		### calc rating
 		# read correct value
+		solutions = None
+		timestampsExpected = None
 		with open(filename.replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "r") as solutionFile:
 			solutions = solutionFile.readlines()
 			timestampsExpected = [datetime.strptime(line.strip(), dateFormat) for line in solutions]
@@ -113,7 +115,7 @@ if __name__ == "__main__":
 				if len(line_parts) > 1:
 					timestamp_EOF = datetime.strptime(line_parts[0].strip(), dateFormat)
 					break
-			
+		
 		if solutions:
 			if timestampReturned:
 				# crash was logged
@@ -122,16 +124,16 @@ if __name__ == "__main__":
 				printDebug(debug, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
 			else:
 				ratingCurrentFile = punishment
-				printDebug(debug, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				printDebug(debug, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, ", ".join(solutions), os.path.basename(filename)))
 		else:
 			# log is of clean driving
 			if timestampReturned:
 				ratingCurrentFile = antiFalsePositive((timestamp_EOF - timestampReturned).total_seconds())
-				printDebug(debug, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				printDebug(debug, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
 
 			else:
 				ratingCurrentFile = -5 * punishment
-				printDebug(debug, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				printDebug(debug, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
 
 		score += ratingCurrentFile
 

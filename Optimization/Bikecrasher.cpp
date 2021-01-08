@@ -17,9 +17,8 @@ using namespace std;
 
 float THRESHOLD_SMOOTH_GYRO_X;
 float THRESHOLD_SMOOTH_GYRO_Y;
-
-float THRESHOLD_YAW;
 float THRESHOLD_SMOOTH_GYRO_Z;
+float THRESHOLD_YAW;
 float THRESHOLD_PITCH;
 float THRESHOLD_ROLL;
 int   THRESHOLD_INT_ACCEL_X;
@@ -73,6 +72,9 @@ double norm(double a, double b, double c);
 double sigmoid_function(double x);
 
 
+//set true for debugging output:
+bool debug;
+
 
 
 int main(int argc, char *argv[]){
@@ -104,7 +106,9 @@ THRESHOLD_INT_GRAVITY_Z = stoi(argv[13]);
 
 COMMON_GRAVITY_Z = 1000;
 
-
+//set true for debugging output:
+//debug = argv[argc].find("debug")!=std::string::npos;
+debug = std::string(argv[argc-1])=="debug";
 
 
 // return from evaluation
@@ -142,9 +146,7 @@ for (auto  sensorData:sensorDataList){
     crashPropability = 0.0;
   }
 
-vector<int> t;
-
-crashPropability = evalContinuous();
+// crashPropability = evalContinuous();
 
   // Reaction
   if (crashPropability > 0.5) {
@@ -214,14 +216,20 @@ aaReal.x=stoi(currentData[6]);
 aaReal.y=stoi(currentData[7]);
 aaReal.z=stoi(currentData[8]);     // [x, y, z]            gravity-free accel sensor measurements
 gravity;    // [x, y, z]            gravity vector
-ypr[0]=stof(currentData[2]);
-ypr[1]=stof(currentData[3]);
-ypr[2]=stof(currentData[4]);
+ypr[0]=stof(currentData[2])/180*M_PI;
+ypr[1]=stof(currentData[3])/180*M_PI;
+ypr[2]=stof(currentData[4])/180*M_PI;
 
 }
 
 void output(string timestamp) {
   cout<<timestamp;
+}
+
+void debug_output(bool debug, string timestamp) {
+  if (debug){
+	cout<<timestamp<<endl;
+  }
 }
 
 
@@ -257,32 +265,38 @@ bool evalDiscrete() {
   /* Evaluate inputs into discrete categories: Crash and Safe */
 
   // Absolute Angle
-  if ( abs(ypr[0] * 180 / M_PI) > THRESHOLD_YAW ///// evtl y-p-r vertauscht
-       || abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH ///// change to rad for more efficienty
+  if ( // abs(ypr[0] * 180 / M_PI) > THRESHOLD_YAW // YAW Abfage sinnlos ///// evtl y-p-r vertauscht
+       abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH ///// change to rad for more efficienty
        || abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL) {
+	debug_output(debug, "Check: Absolute Angle");
     return true;
   }
   // Rate of rotation
   if ( abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X
        || abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y
        || abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z) {
+	debug_output(debug, "Check: Rate of rotation");
     return true;
   }
   // Acceleration
-  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X
-       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y
-       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z) {
+  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*1000
+       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*1000
+       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*1000) {
+	debug_output(debug, "Check: Acceleration");
     return true;
   }
   // Direction of Gravity and Momentum
-  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X
-       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y
-       || abs(accelGravityIntegral.z - COMMON_GRAVITY_Z) > THRESHOLD_INT_GRAVITY_Z) {
+  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*1000
+       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*1000
+       //|| abs(accelGravityIntegral.z - COMMON_GRAVITY_Z) > THRESHOLD_INT_GRAVITY_Z*1000
+	   ) {
+	debug_output(debug, "Check: Gravity and Momentum");
     return true;
   }
   // ...
 
   // no Trigger found
+  debug_output(debug, "No Trigger found");
   return false;
 }
 
