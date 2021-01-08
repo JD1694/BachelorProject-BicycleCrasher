@@ -132,9 +132,10 @@ def readData(data_log):
 
 		except Exception as error:
 			print(error, "WITH LINE:", raw_line)
-	return data, dataTypes
+	return data, dataTypes, tOffset
 
 if __name__ == "__main__":
+	dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 	t = 't'
 	x = 'x'
 	y = 'y'
@@ -149,7 +150,7 @@ if __name__ == "__main__":
 		crash_log = c_log.readlines()
 
 	# prepare and convert data
-	data, dataTypes = readData(data_log)
+	data, dataTypes, tOffset = readData(data_log)
 
 	# setup plots
 	fig = plt.figure()
@@ -161,9 +162,13 @@ if __name__ == "__main__":
 		ax[dataType] = fig.add_subplot(grid[idx,0]) #111)
 		ax[dataType].set_title(dataType)
 		
-		ax[dataType].plot(data[t], data[dataType][x])
-		ax[dataType].plot(data[t], data[dataType][y])
-		ax[dataType].plot(data[t], data[dataType][z])
+		cutExcessIdx_X = min(len(data[t]), len(data[dataType][x]))
+		cutExcessIdx_Y = min(len(data[t]), len(data[dataType][y]))
+		cutExcessIdx_Z = min(len(data[t]), len(data[dataType][z]))
+		
+		ax[dataType].plot(data[t][:cutExcessIdx_X], data[dataType][x][:cutExcessIdx_X])
+		ax[dataType].plot(data[t][:cutExcessIdx_Y], data[dataType][y][:cutExcessIdx_Y])
+		ax[dataType].plot(data[t][:cutExcessIdx_Z], data[dataType][z][:cutExcessIdx_Z])
 
 	# add crash timestamps
 	for tstamp in crash_log:
