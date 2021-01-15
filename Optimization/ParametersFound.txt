@@ -1,4 +1,19 @@
+### Threshold order of magnitudes:
+THRESHOLD_SMOOTH_GYRO_X ( idx:2)	< 200
+THRESHOLD_SMOOTH_GYRO_Y ( idx:3) 	< 200
+THRESHOLD_SMOOTH_GYRO_Z ( idx:4) 	< 200
+THRESHOLD_YAW ( idx:5) 				NONE (< 360)
+THRESHOLD_PITCH ( idx:6) 			< 45
+THRESHOLD_ROLL ( idx:7) 			< 50
+THRESHOLD_INT_ACCEL_X ( idx:8) 		< 10000
+THRESHOLD_INT_ACCEL_Y ( idx:9) 		< 10000
+THRESHOLD_INT_ACCEL_Z ( idx:10) 	< 10000
+THRESHOLD_INT_GRAVITY_X ( idx:11) 	< 10000
+THRESHOLD_INT_GRAVITY_Y ( idx:12) 	< 10000
+THRESHOLD_INT_GRAVITY_Z ( idx:13) 	NONE (< 10000)
+(COMMON_GRAVITY_Z = 19000)
 
+### Evolutionary Algorithm results:
 ---------------------------------------------------
 Die beste Kombination:   [13, 18, 97, 48, 40, 67, 11, 15, 13, 97, 60, 96]
 Bewertet mit:            6.666666666666667
@@ -23,4 +38,11 @@ Bewertet mit:            5.100159333333333
 ---------------------------------------------------
 Die beste Kombination:   [0, 27, 25, 46, 22, 43, 3, 28, 22, 41, 1, 36]
 Bewertet mit:            2.01
+---------------------------------------------------
+
+Effizienz:               190 in 78.2 Sekunden. Bei 400 Kombinationen
+
+---------------------------------------------------
+Die beste Kombination:   [0.13569081154187312, 1, 4, 2, 1, 3, 3, 2, 2, 2, 2, 1]
+Bewertet mit:            7.093685333333333
 ---------------------------------------------------

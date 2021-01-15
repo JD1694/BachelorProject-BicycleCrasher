@@ -21,13 +21,13 @@ float THRESHOLD_SMOOTH_GYRO_Z;
 float THRESHOLD_YAW;
 float THRESHOLD_PITCH;
 float THRESHOLD_ROLL;
-int   THRESHOLD_INT_ACCEL_X;
-int   THRESHOLD_INT_ACCEL_Y;
-int   THRESHOLD_INT_ACCEL_Z;
-int   THRESHOLD_INT_GRAVITY_X;
-int   THRESHOLD_INT_GRAVITY_Y;
-int   THRESHOLD_INT_GRAVITY_Z;
-int   COMMON_GRAVITY_Z;
+float THRESHOLD_INT_ACCEL_X;
+float THRESHOLD_INT_ACCEL_Y;
+float THRESHOLD_INT_ACCEL_Z;
+float THRESHOLD_INT_GRAVITY_X;
+float THRESHOLD_INT_GRAVITY_Y;
+float THRESHOLD_INT_GRAVITY_Z;
+float COMMON_GRAVITY_Z;
 // continuous calc variables
 float  ypr_eval;
 float  gyro_eval;
@@ -42,8 +42,8 @@ double normalized_continuous_rating = 0.0;
 VectorInt16 accelIntegral;
 VectorInt16 accelGravityIntegral;
 VectorFloat gyroSmoothend;
-const float GYRO_EXP_DECLINE_FACTOR= 0.1;
-const int   FIFO_INT_LENGTH_BIG= 20;
+const float GYRO_EXP_DECLINE_FACTOR = 0.1;
+const int FIFO_INT_LENGTH_BIG = 20;
 const int FIFO_INT_LENGTH_SHORT = 8;
 
 // hold past data to filter
@@ -70,7 +70,8 @@ bool evalDiscrete();
 double evalContinuous();
 double norm(double a, double b, double c);
 double sigmoid_function(double x);
-
+void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint );
+void rotateZ(float radAngle, float point[3], float *rotatedPoint );
 
 //set true for debugging output:
 bool debug;
@@ -92,17 +93,17 @@ THRESHOLD_PITCH = stof(argv[6]);
 
 THRESHOLD_ROLL = stof(argv[7]);
 
-THRESHOLD_INT_ACCEL_X = stoi(argv[8]);
+THRESHOLD_INT_ACCEL_X = stof(argv[8]);
 
-THRESHOLD_INT_ACCEL_Y = stoi(argv[9]);
+THRESHOLD_INT_ACCEL_Y = stof(argv[9]);
 
-THRESHOLD_INT_ACCEL_Z = stoi(argv[10]);
+THRESHOLD_INT_ACCEL_Z = stof(argv[10]);
 
-THRESHOLD_INT_GRAVITY_X = stoi(argv[11]);
+THRESHOLD_INT_GRAVITY_X = stof(argv[11]);
 
-THRESHOLD_INT_GRAVITY_Y = stoi(argv[12]);
+THRESHOLD_INT_GRAVITY_Y = stof(argv[12]);
 
-THRESHOLD_INT_GRAVITY_Z = stoi(argv[13]);
+THRESHOLD_INT_GRAVITY_Z = stof(argv[13]);
 
 COMMON_GRAVITY_Z = 1000;
 
@@ -235,7 +236,7 @@ void debug_output(bool debug, string timestamp) {
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
-
+/*
   // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG) (Exponential Moving Average possible?)
   if (fifo_aaReal.isFull()){
     last_aaReal = fifo_aaReal.shift();
@@ -253,6 +254,16 @@ void prepareData() {
   }
   fifo_aaReal.push(aaReal);
   fifo_aa.push(aa);
+  */
+  // Filter aaReal data (Exponential Moving Average)
+  accelIntegral.x = accelIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.x * GYRO_EXP_DECLINE_FACTOR;
+  accelIntegral.y = accelIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.y * GYRO_EXP_DECLINE_FACTOR;
+  accelIntegral.z = accelIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.z * GYRO_EXP_DECLINE_FACTOR;
+  
+  // Filter aa data (Exponential Moving Average)
+  accelGravityIntegral.x = accelGravityIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.x * GYRO_EXP_DECLINE_FACTOR;
+  accelGravityIntegral.y = accelGravityIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.y * GYRO_EXP_DECLINE_FACTOR;
+  accelGravityIntegral.z = accelGravityIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.z * GYRO_EXP_DECLINE_FACTOR;
   
   // Filter gyro data (Exponential Moving Average)
   gyroSmoothend.x = gyroSmoothend.x * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.x * GYRO_EXP_DECLINE_FACTOR;
@@ -266,29 +277,29 @@ bool evalDiscrete() {
 
   // Absolute Angle
   if ( // abs(ypr[0] * 180 / M_PI) > THRESHOLD_YAW // YAW Abfage sinnlos ///// evtl y-p-r vertauscht
-       abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH ///// change to rad for more efficienty
-       || abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL) {
+       abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45 ///// change to rad for more efficienty
+       || abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50) {
 	debug_output(debug, "Check: Absolute Angle");
     return true;
   }
   // Rate of rotation
-  if ( abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X
-       || abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y
-       || abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z) {
+  if ( abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200
+       || abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200
+       || abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200) {
 	debug_output(debug, "Check: Rate of rotation");
     return true;
   }
   // Acceleration
-  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*1000
-       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*1000
-       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*1000) {
+  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000
+       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000
+       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000) {
 	debug_output(debug, "Check: Acceleration");
     return true;
   }
   // Direction of Gravity and Momentum
-  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*1000
-       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*1000
-       //|| abs(accelGravityIntegral.z - COMMON_GRAVITY_Z) > THRESHOLD_INT_GRAVITY_Z*1000
+  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000
+       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000
+       //|| abs(accelGravityIntegral.z - COMMON_GRAVITY_Z) > THRESHOLD_INT_GRAVITY_Z*10000
 	   ) {
 	debug_output(debug, "Check: Gravity and Momentum");
     return true;
@@ -351,4 +362,21 @@ double sigmoid_function(double x){
    *  Returns results between 0 (for very negative x) and 1 (for very positive x) 
    *  centered around x=0 where 0.5 is returned*/
    return x / (2*(1 + abs(x))) + 0.5;
+}
+
+void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ){
+  VectorFloat returnVal;
+  returnVal.x = cos(radAngle)*point.x - sin(radAngle)*point.y;
+  returnVal.y = sin(radAngle)*point.x + cos(radAngle)*point.y;
+  *rotatedPoint = returnVal;
+  delete &returnVal;
+  return;
+}
+
+void rotateZ(float radAngle, float point[3], float *rotatedPoint ){
+  /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
+  *rotatedPoint     = cos(radAngle)*point[0] - sin(radAngle)*point[1];
+  *(rotatedPoint+1) = sin(radAngle)*point[0] + cos(radAngle)*point[1];
+  *(rotatedPoint+2) = point[2];
+  return;
 }
