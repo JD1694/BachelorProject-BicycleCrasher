@@ -5,12 +5,14 @@ import random
 import subprocess
 import ast  # convert Strings
 
+import numpy as np
+from geneticalgorithm import geneticalgorithm as ga
+
 
 
 # Constants: configuration and paths
-iterations = 6		# number of random files to test
 timeOffset = 7	# delta seconds that calculated timestamp of crash may vary from recorded timestamp.
-punishment = -1		# negative value added rating for false positives
+punishment = -1	# negative value added rating for false positives
 dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 testProgram_rel = "./Bikecrasher.exe"
 path2logs_rel = "./../Python-Tests-Analyse/logs/"
@@ -32,14 +34,6 @@ crashLog1 = os.path.join(path2logs, crashLog1_rel)
 crashLog2 = os.path.join(path2logs, crashLog2_rel)
 crashLog3 = os.path.join(path2logs, crashLog3_rel)
 crashLog4 = os.path.join(path2logs, crashLog4_rel)
-
-# used vars
-debug = False
-rating = None
-timestampReturned = None
-timestampsExpected = None
-timestampOffsetCorrection = 0
-score = 0
 
 
 
@@ -68,38 +62,30 @@ def antiFalsePositive(secondsLeft):
 	return -20 * secondsLeft
 
 
-def printDebug(debug, *strings):
-	if debug:
-		print(*strings)
+def runSimulation(genome):
+	# used vars
+	debug = 0
+	rating = None
+	timestampReturned = None
+	timestampsExpected = None
+	score = 0
+	
+	### get genome from evolutionary algorithm as numpy array
+	printDebug(debug, "\n")
+	printDebug(debug, genome)
 
-
-if __name__ == "__main__":
-	### get genome from evolutionary algorithm
-	if "debug" in sys.argv:
-		debug = True
-		print("DEBUG Mode activated")
-	genome = sys.argv[-1] if sys.argv[1:] else '[' + ', '.join(['1' for i in range(20)]) + ']'
-	genome = ast.literal_eval(genome) # list(genome)
-	genome = [str(i) for i in genome]
-	printDebug(debug, type(genome), genome)
-	
-	
-	### choose files
-	##filelist = [os.path.join(path2logs, file) for file in os.listdir(path2logs) if not "_timestamps" in file]
-	##random.shuffle(filelist)
-	##filelist = filelist[:iterations]
-	##filelist.append(normalDrivingLog)
-	
 	# most log files are flawed, use manual chosen files instead
 	filelist = [crashLog1, crashLog2, crashLog3, crashLog4, normalDrivingLog1, normalDrivingLog2]
-	
+
 	
 	for filename in filelist:
 	
 		### call program to evaluate
-		result = subprocess.run([testProgram, filename, *genome], capture_output=True)
-		printDebug(debug, result)
+		arg = [testProgram, filename, *genome.astype(str)] #convert np array to str
+		result = subprocess.run(arg, capture_output=True)
+		printDebug(debug-1, result)
 		result_str = result.stdout.decode().strip()
+		printDebug(debug, result_str)
 		
 		if result_str:
 			timestampReturned = datetime.strptime(result_str, dateFormat)
@@ -127,22 +113,60 @@ if __name__ == "__main__":
 				# crash was logged
 				nearestExpectedTimestamp = min(timestampsExpected, key=lambda t: abs(timestampReturned - t).total_seconds())
 				ratingCurrentFile = pointsByTime((timestampReturned - nearestExpectedTimestamp).total_seconds())
-				printDebug(debug, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
 			else:
 				ratingCurrentFile = punishment
-				printDebug(debug, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, ", ".join(solutions), os.path.basename(filename)))
+				printDebug(debug-2, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, ", ".join(solutions), os.path.basename(filename)))
 		else:
 			# log is of clean driving
 			if timestampReturned:
 				ratingCurrentFile = antiFalsePositive((timestamp_EOF - timestampReturned).total_seconds())
-				printDebug(debug, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
+				printDebug(debug-2, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
 
 			else:
 				ratingCurrentFile = -5 * punishment
-				printDebug(debug, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
+				printDebug(debug-2, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
 
+		printDebug(debug-1, ratingCurrentFile)
 		score += ratingCurrentFile
 
 		
 	### return final rating to evolutionary algorithm
-	print(score/iterations)
+	printDebug(score/len(filelist))
+	return -score/len(filelist)
+
+
+def printDebug(debug, *strings):
+	if debug>=1:
+		print(*strings)
+
+
+def runGA():
+	varbound=np.array([[0,1000]]*12)
+
+	algorithm_param = {'max_num_iteration': 50,\
+					   'population_size':50,\
+					   'mutation_probability':0.2,\
+					   'elit_ratio': 0.02,\
+					   'crossover_probability': 0.5,\
+					   'parents_portion': 0.3,\
+					   'crossover_type':'uniform',\
+					   'max_iteration_without_improv':None}
+
+	model=ga(function=runSimulation,\
+				dimension=12,\
+				variable_type='real',\
+				variable_boundaries=varbound,\
+				algorithm_parameters=algorithm_param)
+
+	model.run()
+
+
+if __name__ == "__main__":
+	#try:
+	runGA()
+		
+	#except Exception as error:
+	#	print("ERROR:\n", error)
+		
+	input("\nDone. Press enter to exit...")

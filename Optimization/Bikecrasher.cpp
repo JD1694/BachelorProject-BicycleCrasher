@@ -61,6 +61,12 @@ VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measure
 VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+// rotated to new coord sys
+float rotateZAngle = 0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
+VectorFloat aa_rot;         // [x, y, z]            accel sensor measurements
+VectorFloat gy_rot;         // [x, y, z]            gyro sensor measurements
+VectorFloat aaReal_rot;     // [x, y, z]            gravity-free accel sensor measurements
+float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
 list<vector<string>> sensorDataGetter(string argument);
 void getSensorReadings(vector<string> currentData);
@@ -236,6 +242,13 @@ void debug_output(bool debug, string timestamp) {
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
+  // rotate used sensor data to new cood system
+  rotateZ( rotateZAngle, aa, &aa_rot );
+  rotateZ( rotateZAngle, aaReal, &aaReal_rot );
+  rotateZ( rotateZAngle, gy, &gy_rot );
+  //rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+  
+  
 /*
   // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG) (Exponential Moving Average possible?)
   if (fifo_aaReal.isFull()){
@@ -255,20 +268,20 @@ void prepareData() {
   fifo_aaReal.push(aaReal);
   fifo_aa.push(aa);
   */
-  // Filter aaReal data (Exponential Moving Average)
-  accelIntegral.x = accelIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.x * GYRO_EXP_DECLINE_FACTOR;
-  accelIntegral.y = accelIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.y * GYRO_EXP_DECLINE_FACTOR;
-  accelIntegral.z = accelIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal.z * GYRO_EXP_DECLINE_FACTOR;
+  // Filter rotated aaReal data (Exponential Moving Average)
+  accelIntegral.x = accelIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.x * GYRO_EXP_DECLINE_FACTOR;
+  accelIntegral.y = accelIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.y * GYRO_EXP_DECLINE_FACTOR;
+  accelIntegral.z = accelIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.z * GYRO_EXP_DECLINE_FACTOR;
   
-  // Filter aa data (Exponential Moving Average)
-  accelGravityIntegral.x = accelGravityIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.x * GYRO_EXP_DECLINE_FACTOR;
-  accelGravityIntegral.y = accelGravityIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.y * GYRO_EXP_DECLINE_FACTOR;
-  accelGravityIntegral.z = accelGravityIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aa.z * GYRO_EXP_DECLINE_FACTOR;
+  // Filter rotated aa data (Exponential Moving Average)
+  accelGravityIntegral.x = accelGravityIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.x * GYRO_EXP_DECLINE_FACTOR;
+  accelGravityIntegral.y = accelGravityIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.y * GYRO_EXP_DECLINE_FACTOR;
+  accelGravityIntegral.z = accelGravityIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.z * GYRO_EXP_DECLINE_FACTOR;
   
   // Filter gyro data (Exponential Moving Average)
-  gyroSmoothend.x = gyroSmoothend.x * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.x * GYRO_EXP_DECLINE_FACTOR;
-  gyroSmoothend.y = gyroSmoothend.y * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.y * GYRO_EXP_DECLINE_FACTOR;
-  gyroSmoothend.z = gyroSmoothend.z * (1 - GYRO_EXP_DECLINE_FACTOR) + gy.z * GYRO_EXP_DECLINE_FACTOR;
+  gyroSmoothend.x = gyroSmoothend.x * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.x * GYRO_EXP_DECLINE_FACTOR;
+  gyroSmoothend.y = gyroSmoothend.y * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.y * GYRO_EXP_DECLINE_FACTOR;
+  gyroSmoothend.z = gyroSmoothend.z * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.z * GYRO_EXP_DECLINE_FACTOR;
 }
 
 
@@ -277,28 +290,28 @@ bool evalDiscrete() {
 
   // Absolute Angle
   if ( // abs(ypr[0] * 180 / M_PI) > THRESHOLD_YAW // YAW Abfage sinnlos ///// evtl y-p-r vertauscht
-       abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45 ///// change to rad for more efficienty
-       || abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50) {
+       abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45/100 ///// change to rad for more efficienty
+       || abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50/100) {
 	debug_output(debug, "Check: Absolute Angle");
     return true;
   }
   // Rate of rotation
-  if ( abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200
-       || abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200
-       || abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200) {
+  if ( abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200/100
+       || abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200/100
+       || abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200/100) {
 	debug_output(debug, "Check: Rate of rotation");
     return true;
   }
   // Acceleration
-  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000
-       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000
-       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000) {
+  if ( abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000/100
+       || abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000/100
+       || abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000/100) {
 	debug_output(debug, "Check: Acceleration");
     return true;
   }
   // Direction of Gravity and Momentum
-  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000
-       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000
+  if ( abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000/100
+       || abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100
        //|| abs(accelGravityIntegral.z - COMMON_GRAVITY_Z) > THRESHOLD_INT_GRAVITY_Z*10000
 	   ) {
 	debug_output(debug, "Check: Gravity and Momentum");
