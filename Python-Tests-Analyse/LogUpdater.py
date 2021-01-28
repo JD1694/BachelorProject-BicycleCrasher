@@ -43,13 +43,13 @@ if __name__ == "__main__":
 		# open log file
 		with open(os.path.join(path2logs, filename), "r") as f:
 			content_lines = f.readlines()
+			print(os.path.join(path2logs, filename), "\ncontent:", content_lines[:3])
 			content = [[part.strip() for part in line.split(',')] for line in content_lines]
-			
-		# open corresponding timestamp file
-		
 		
 		# detect wrong dates
+		print(content[:3])
 		date1 = datetime.strptime(content[0][0], dateFormat) # first date
+		content_fixed = content
 		if date1<datetime(2000, 1, 1, 1, 1, 1, 1):
 			# timestamps in file are old
 			
@@ -64,19 +64,14 @@ if __name__ == "__main__":
 			
 			content_fixed = shiftTimestamps(content, offset)
 		
-		# save changes
-		newfilename = "updatedStamps_"+filename
-		with open(os.path.join(path2logs, newfilename), "w") as f:
-			joined1 = [", ".join(splitLines) for splitLines in content_fixed]
-			joined2 = "\n".join(joined1)
-			f.writelines(joined2)
-		
+			# save changes
+			with open(os.path.join(path2logs, filename), "w") as f:
+				joined1 = [", ".join(splitLines) for splitLines in content_fixed]
+				joined2 = "\n".join(joined1)
+				f.writelines(joined2)
+
 		# plot new file
-		copyfile(\
-			os.path.join(path2logs, ""+filename).replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), \
-			os.path.join(path2logs, "updatedStamps_"+filename).replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv")) 
-			# create timestamps file (that plotcrash needs) with new name
-		plot = subprocess.Popen([sys.executable, "PlotCrash.py", os.path.join(path2logs, newfilename)],\
+		plot = subprocess.Popen([sys.executable, os.path.join(dirname, "PlotCrash.py"), os.path.join(path2logs, filename)],\
 						stdout=subprocess.DEVNULL) #no output
 		
 		# promt to change crash timestamps
@@ -105,7 +100,7 @@ if __name__ == "__main__":
 						new_timestamps.append(t+"\n")
 			
 			# save new timestamps
-			with open(os.path.join(path2logs, "updatedStamps_"+filename).replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "w") as f:
+			with open(os.path.join(path2logs, filename).replace(".txt", "_timestamps.txt").replace(".csv", "_timestamps.csv"), "w") as f:
 				f.writelines(new_timestamps)
 		
 		# close process

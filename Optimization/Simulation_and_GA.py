@@ -19,10 +19,15 @@ path2logs_rel = "./../Python-Tests-Analyse/logs/"
 
 normalDrivingLog1_rel = "normalesfahren_2020-12-18_17-51-07.txt" # against false positives
 normalDrivingLog2_rel = "normales_fahren_easy_2021-01-08_17-48-25.txt"
-crashLog1_rel = "auslaufen_2020-12-18_17-07-38.txt" # against false negatives
-crashLog2_rel = "auslaufen_2020-12-18_17-11-11.txt"
-crashLog3_rel = "wegziehen_2020-12-18_17-58-16.txt"
-crashLog4_rel = "wegziehen_2020-12-18_17-59-22.txt"
+crashLog1_rel = "aauslaufen_2020-12-18_17-21-33.txt" # against false negatives
+crashLog2_rel = "jdtrittfahrradvonvorne_2020-12-18_17-44-33.txt"
+crashLog3_rel = "trittgegenhinterrad_2020-12-18_17-46-50.txt"
+crashLog4_rel = "schraegdenrasenrunter_2020-12-18_17-48-35.txt"
+#treppe_hoch_2020-12-18_17-25-07.txt
+#crashLog1_rel = "auslaufen_2020-12-18_17-07-38.txt"
+#crashLog2_rel = "auslaufen_2020-12-18_17-11-11.txt"
+#crashLog3_rel = "wegziehen_2020-12-18_17-58-16.txt"
+#crashLog4_rel = "wegziehen_2020-12-18_17-59-22.txt"
 
 # make file paths independant of working directory
 dirname = os.path.dirname(__file__)
@@ -144,14 +149,14 @@ def printDebug(debug, *strings):
 def runGA():
 	varbound=np.array([[0,1000]]*12)
 
-	algorithm_param = {'max_num_iteration': 50,\
-					   'population_size':50,\
-					   'mutation_probability':0.2,\
-					   'elit_ratio': 0.02,\
+	algorithm_param = {'max_num_iteration':70,\
+					   'population_size':100,\
+					   'mutation_probability':0.15,\
+					   'elit_ratio': 0.01,\
 					   'crossover_probability': 0.5,\
 					   'parents_portion': 0.3,\
 					   'crossover_type':'uniform',\
-					   'max_iteration_without_improv':None}
+					   'max_iteration_without_improv':20}
 
 	model=ga(function=runSimulation,\
 				dimension=12,\
