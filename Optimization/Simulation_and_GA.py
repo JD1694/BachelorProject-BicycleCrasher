@@ -12,9 +12,9 @@ from geneticalgorithm import geneticalgorithm as ga
 
 # Constants: configuration and paths
 timeOffset = 2	# delta seconds that calculated timestamp of crash may vary from recorded timestamp.
-punishment = -1	# negative value added rating for false positives
+punishment = -100	# negative value added rating for false positives
 dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
-testProgram_rel = "./Bikecrasher.exe"
+testProgram_rel = "./Bikecrasher.exe" if 'w' in sys.platform else "./a.out"
 path2logs_rel = "./../Python-Tests-Analyse/logs/"
 
 normalDrivingLog1_rel = "normalesfahren_2020-12-18_17-51-07.txt" # against false positives
@@ -50,9 +50,9 @@ def pointsByTime(tDiff):
 	But none, if it is outside a maximum timeOffset where it is no longer considerd a crash.
 			 +
 			 +  +
-			 +     +
+		   y=0     +
 			 +        +
-	--------------------------------> t
+	------------t=0------------------> t
 	"""
 	if abs(tDiff) < timeOffset:
 		return -tDiff + timeOffset + punishment
@@ -64,12 +64,12 @@ def antiFalsePositive(secondsLeft):
 	""" Used in case of a log file without a crash. Generally negative when a crash is detected nevertheless. 
 	More points are given, the later the false positive is made. 
 	Param: seconds left from timestamp of detecetion until EOF (End Of File)"""
-	return -20 * secondsLeft
+	return -secondsLeft
 
 
-def runSimulation(genome):
+def runSimulation(genome, debug=0):
 	# used vars
-	debug = 0
+	
 	rating = None
 	timestampReturned = None
 	timestampsExpected = None
@@ -93,10 +93,12 @@ def runSimulation(genome):
 		printDebug(debug, result_str)
 		
 		if result_str:
-			timestampReturned = datetime.strptime(result_str, dateFormat)
+			#timestampReturned = datetime.strptime(result_str, dateFormat)
+			timeWithPropability = [[datetime.strptime(line.split(" ")[0], dateFormat), float(line.split(" ")[-1])] for line in result_str.split("\n") if line]
 		else:
 			# no timestamp was returned
-			timestampReturned = None
+			#timestampReturned = None
+			timeWithPropability = None
 		
 		### calc rating
 		# read correct value
@@ -113,24 +115,35 @@ def runSimulation(genome):
 					timestamp_EOF = datetime.strptime(line_parts[0].strip(), dateFormat)
 					break
 		
+		ratingCurrentFile = 0
 		if solutions:
-			if timestampReturned:
+			if timeWithPropability: #timestampReturned:
 				# crash was logged
-				nearestExpectedTimestamp = min(timestampsExpected, key=lambda t: abs(timestampReturned - t).total_seconds())
-				ratingCurrentFile = pointsByTime((timestampReturned - nearestExpectedTimestamp).total_seconds())
-				printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				#nearestExpectedTimestamp = min(timestampsExpected, key=lambda t: abs(timestampReturned - t).total_seconds())
+				#ratingCurrentFile = pointsByTime((timestampReturned - nearestExpectedTimestamp).total_seconds())
+				#printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, nearestExpectedTimestamp, os.path.basename(filename)))
+				
+				for timestampReturned, percent in timeWithPropability:
+					# get nearest crash
+					nearestExpectedTimestamp = min(timestampsExpected, key=lambda t: abs(timestampReturned - t).total_seconds())
+					# rate this stamp mith percentage confidence
+					ratingCurrentFile += pointsByTime((timestampReturned - nearestExpectedTimestamp).total_seconds()) * percent
+				printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} length: {} file: {}\n".format(ratingCurrentFile, timeWithPropability[1], len(timeWithPropability), os.path.basename(filename)))
 			else:
 				ratingCurrentFile = punishment
-				printDebug(debug-2, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, ", ".join(solutions), os.path.basename(filename)))
+				printDebug(debug-2, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} file: {}\n".format(ratingCurrentFile, None, ", ".join(solutions), os.path.basename(filename)))
 		else:
 			# log is of clean driving
-			if timestampReturned:
-				ratingCurrentFile = antiFalsePositive((timestamp_EOF - timestampReturned).total_seconds())
-				printDebug(debug-2, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
-
+			if timeWithPropability: #timestampReturned:
+				#ratingCurrentFile = antiFalsePositive((timestamp_EOF - timestampReturned).total_seconds())
+				#printDebug(debug-2, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
+				
+				for timestampReturned, percent in timeWithPropability:
+					ratingCurrentFile += antiFalsePositive((timestamp_EOF - timestampReturned).total_seconds()) * percent
+				printDebug(debug-2, "\nWrong! Crash was detected.\t Rating: {}\t\t returned: {} expected: {} file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
 			else:
 				ratingCurrentFile = -5 * punishment
-				printDebug(debug-2, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} \t file: {}\n".format(ratingCurrentFile, timestampReturned, "None", os.path.basename(filename)))
+				printDebug(debug-2, "\nRight! No crash detected.\t Rating: {}\t\t returned: {} expected: {} file: {}\n".format(ratingCurrentFile, None, None, os.path.basename(filename)))
 
 		printDebug(debug-1, ratingCurrentFile)
 		score += ratingCurrentFile
@@ -146,11 +159,11 @@ def printDebug(debug, *strings):
 		print(*strings)
 
 
-def runGA():
-	varbound=np.array([[0,1000]]*12)
+def runGA(generations=15, populationSize=30):
+	varbound=np.array([[0,1000]]*13)
 
-	algorithm_param = {'max_num_iteration':70,\
-					   'population_size':100,\
+	algorithm_param = {'max_num_iteration':generations,\
+					   'population_size':populationSize,\
 					   'mutation_probability':0.15,\
 					   'elit_ratio': 0.01,\
 					   'crossover_probability': 0.5,\
@@ -159,7 +172,7 @@ def runGA():
 					   'max_iteration_without_improv':20}
 
 	model=ga(function=runSimulation,\
-				dimension=12,\
+				dimension=13,\
 				variable_type='real',\
 				variable_boundaries=varbound,\
 				algorithm_parameters=algorithm_param)
@@ -168,10 +181,12 @@ def runGA():
 
 
 if __name__ == "__main__":
-	#try:
-	runGA()
-		
-	#except Exception as error:
-	#	print("ERROR:\n", error)
-		
+	if sys.argv[1:]:
+		print("Running simulation once with given genome")
+		print(runSimulation(np.array(sys.argv[1:]), debug=3))
+	else:
+		print("starting Genetic Algorithm")
+		inpPopulation = int(input("Enter Population Size: "))
+		inpGeneration = int(input("Enter Number of Generations: "))
+		runGA(generations=inpGeneration, populationSize=inpPopulation)
 	input("\nDone. Press enter to exit...")

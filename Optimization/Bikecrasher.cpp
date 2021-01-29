@@ -11,7 +11,7 @@
 #include<cctype>
 //#include <I2Cdev.h>
 #include "MPU6050_6Axis_MotionApps20.h"
-#include "CircularBuffer.h"
+
 using namespace std;
 
 
@@ -28,8 +28,10 @@ float THRESHOLD_INT_GRAVITY_X;
 float THRESHOLD_INT_GRAVITY_Y;
 float THRESHOLD_INT_GRAVITY_Z;
 float COMMON_GRAVITY_Z;
+float THRESHOLD_ACCEL_DELTA;
+
 // Discrete Step counter
-int    stepCount;
+float  stepCount;
 // continuous calc variables
 float  ypr_eval;
 float  gyro_eval;
@@ -38,19 +40,18 @@ int    gravity_eval;
 double delta_x;
 double delta_y;
 double delta_z;
+double former_x=0;
+double former_y=0;
+double former_z=0;
+double accel_delta;
 double continuous_rating = 0.0;
 double normalized_continuous_rating = 0.0;
 // Further processed data
 VectorInt16 accelIntegral;
 VectorInt16 accelGravityIntegral;
 VectorFloat gyroSmoothend;
-const float GYRO_EXP_DECLINE_FACTOR = 0.1;
-const int FIFO_INT_LENGTH_BIG = 20;
-const int FIFO_INT_LENGTH_SHORT = 8;
+const float MOVING_AVERAGE_DECLINE = 0.1;
 
-// hold past data to filter
-CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aaReal;
-CircularBuffer<VectorInt16,FIFO_INT_LENGTH_BIG> fifo_aa;
 VectorInt16 last_aaReal;
 VectorInt16 last_aa;
 
@@ -69,6 +70,7 @@ VectorFloat aa_rot;         // [x, y, z]            accel sensor measurements
 VectorFloat gy_rot;         // [x, y, z]            gyro sensor measurements
 VectorFloat aaReal_rot;     // [x, y, z]            gravity-free accel sensor measurements
 float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+VectorFloat rotateZreturnVal;
 
 list<vector<string>> sensorDataGetter(string argument);
 void getSensorReadings(vector<string> currentData);
@@ -114,6 +116,7 @@ THRESHOLD_INT_GRAVITY_Y = stof(argv[12]);
 
 THRESHOLD_INT_GRAVITY_Z = stof(argv[13]);
 
+THRESHOLD_ACCEL_DELTA = stof(argv[14]);
 COMMON_GRAVITY_Z = 1000;
 
 //set true for debugging output:
@@ -138,7 +141,7 @@ string filename(argv[1]);
 list<vector<string>> sensorDataList=sensorDataGetter(filename);
 string sizeoflist=to_string(sensorDataList.size());
 for (auto  sensorData:sensorDataList){
-	// Get sensor readings
+  // Get sensor readings
   getSensorReadings(sensorData);
   
   // Prepare data, filter and convert to get more measurable input
@@ -146,10 +149,9 @@ for (auto  sensorData:sensorDataList){
 
   // Evaluate inputs
   crashPropability = evalDiscreteSteps();
-  if (crashPropability >= 0.1) {
-    cout<<sensorData[0]<<endl;
+  if (crashPropability > 0.09) {
+    cout<<sensorData[0]+" ";
 	cout<<crashPropability<<endl;
-    return 0;
   }
   /*crashYesNo = evalDiscrete();
   if (crashYesNo)
@@ -172,7 +174,6 @@ for (auto  sensorData:sensorDataList){
 
 
 }
-
   return 0;
 }
 
@@ -280,19 +281,29 @@ void prepareData() {
   fifo_aa.push(aa);
   */
   // Filter rotated aaReal data (Exponential Moving Average)
-  accelIntegral.x = accelIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.x * GYRO_EXP_DECLINE_FACTOR;
-  accelIntegral.y = accelIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.y * GYRO_EXP_DECLINE_FACTOR;
-  accelIntegral.z = accelIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aaReal_rot.z * GYRO_EXP_DECLINE_FACTOR;
+  accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.x * MOVING_AVERAGE_DECLINE;
+  accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.y * MOVING_AVERAGE_DECLINE;
+  accelIntegral.z = accelIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.z * MOVING_AVERAGE_DECLINE;
   
   // Filter rotated aa data (Exponential Moving Average)
-  accelGravityIntegral.x = accelGravityIntegral.x * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.x * GYRO_EXP_DECLINE_FACTOR;
-  accelGravityIntegral.y = accelGravityIntegral.y * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.y * GYRO_EXP_DECLINE_FACTOR;
-  accelGravityIntegral.z = accelGravityIntegral.z * (1 - GYRO_EXP_DECLINE_FACTOR) + aa_rot.z * GYRO_EXP_DECLINE_FACTOR;
+  accelGravityIntegral.x = accelGravityIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.x * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.y = accelGravityIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.y * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.z = accelGravityIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.z * MOVING_AVERAGE_DECLINE;
   
   // Filter gyro data (Exponential Moving Average)
-  gyroSmoothend.x = gyroSmoothend.x * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.x * GYRO_EXP_DECLINE_FACTOR;
-  gyroSmoothend.y = gyroSmoothend.y * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.y * GYRO_EXP_DECLINE_FACTOR;
-  gyroSmoothend.z = gyroSmoothend.z * (1 - GYRO_EXP_DECLINE_FACTOR) + gy_rot.z * GYRO_EXP_DECLINE_FACTOR;
+  gyroSmoothend.x = gyroSmoothend.x * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.x * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.y = gyroSmoothend.y * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.y * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.z = gyroSmoothend.z * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.z * MOVING_AVERAGE_DECLINE;
+  // Difference in acceleration compared to moving average
+  delta_x =former_x-accelIntegral.x;
+  delta_y =former_y-accelIntegral.y;
+  delta_z =former_z-accelIntegral.z;
+
+  accel_delta = norm(delta_x, delta_y, delta_z);
+
+  former_x = accelIntegral.x*MOVING_AVERAGE_DECLINE+former_x*(1-MOVING_AVERAGE_DECLINE);
+  former_y = accelIntegral.y*MOVING_AVERAGE_DECLINE+former_y*(1-MOVING_AVERAGE_DECLINE);
+  former_z = accelIntegral.z*MOVING_AVERAGE_DECLINE+former_z*(1-MOVING_AVERAGE_DECLINE);
 }
 
 
@@ -355,11 +366,15 @@ double evalDiscreteSteps() {
   
   // Direction of Gravity and Momentum
   + 1*(abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000/100)
-  + 1*(abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100) ;
+  + 1*(abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100)
+  
+  // Change in Acceleration
+  + 1*(abs(accel_delta)>THRESHOLD_ACCEL_DELTA*10000/100)
+  ;
 
   // no Trigger found
   debug_output(debug, std::to_string(stepCount));
-  return stepCount/10;
+  return stepCount/11;
 }
 
 
@@ -381,10 +396,10 @@ double evalContinuous() {
   gyro_eval = norm(delta_x, delta_y, delta_z);
 
   // Acceleration
-  delta_x = abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X;
-  delta_y = abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y;
-  delta_z = abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z;
-  accel_eval = norm(delta_x, delta_y, delta_z);
+  //delta_x = abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X;
+  //delta_y = abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y;
+  //delta_z = abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z;
+  //accel_eval = norm(delta_x, delta_y, delta_z);
 
   // Direction of Gravity and Momentum
   delta_x = abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X;
@@ -416,11 +431,10 @@ double sigmoid_function(double x){
 }
 
 void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ){
-  VectorFloat returnVal;
-  returnVal.x = cos(radAngle)*point.x - sin(radAngle)*point.y;
-  returnVal.y = sin(radAngle)*point.x + cos(radAngle)*point.y;
-  *rotatedPoint = returnVal;
-  delete &returnVal;
+  rotateZreturnVal.x = cos(radAngle)*point.x - sin(radAngle)*point.y;
+  rotateZreturnVal.y = sin(radAngle)*point.x + cos(radAngle)*point.y;
+  *rotatedPoint = rotateZreturnVal;
+  //delete &rotateZreturnVal;
   return;
 }
 
