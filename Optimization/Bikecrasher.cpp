@@ -28,6 +28,8 @@ float THRESHOLD_INT_GRAVITY_X;
 float THRESHOLD_INT_GRAVITY_Y;
 float THRESHOLD_INT_GRAVITY_Z;
 float COMMON_GRAVITY_Z;
+// Discrete Step counter
+int    stepCount;
 // continuous calc variables
 float  ypr_eval;
 float  gyro_eval;
@@ -73,6 +75,7 @@ void getSensorReadings(vector<string> currentData);
 void output(string timestamp);
 void prepareData();
 bool evalDiscrete();
+double evalDiscreteSteps();
 double evalContinuous();
 double norm(double a, double b, double c);
 double sigmoid_function(double x);
@@ -142,8 +145,13 @@ for (auto  sensorData:sensorDataList){
   prepareData();
 
   // Evaluate inputs
-
-  crashYesNo = evalDiscrete();
+  crashPropability = evalDiscreteSteps();
+  if (crashPropability >= 0.1) {
+    cout<<sensorData[0]<<endl;
+	cout<<crashPropability<<endl;
+    return 0;
+  }
+  /*crashYesNo = evalDiscrete();
   if (crashYesNo)
   {
     crashPropability = 1.0;
@@ -153,13 +161,13 @@ for (auto  sensorData:sensorDataList){
     crashPropability = 0.0;
   }
 
-// crashPropability = evalContinuous();
+  crashPropability = evalContinuous();
 
   // Reaction
   if (crashPropability > 0.5) {
     output(sensorData[0]);
     return 0;
-  }
+  }*/
 
 
 
@@ -212,20 +220,23 @@ ifstream input(filename);
 
 
 void getSensorReadings(vector<string> currentData) {
-
-aa.x=stoi(currentData[10]);
-aa.y=stoi(currentData[11]);
-aa.z=stoi(currentData[12]);         // [x, y, z]            accel sensor measurements
-gy.x=stoi(currentData[14]);
-gy.y=stoi(currentData[15]);
-gy.z=stoi(currentData[16]);         // [x, y, z]            gyro sensor measurements
-aaReal.x=stoi(currentData[6]);
-aaReal.y=stoi(currentData[7]);
-aaReal.z=stoi(currentData[8]);     // [x, y, z]            gravity-free accel sensor measurements
-gravity;    // [x, y, z]            gravity vector
 ypr[0]=stof(currentData[2])/180*M_PI;
 ypr[1]=stof(currentData[3])/180*M_PI;
 ypr[2]=stof(currentData[4])/180*M_PI;
+// [x, y, z] gravity-free accel sensor measurements
+aaReal.x=stoi(currentData[6]);
+aaReal.y=stoi(currentData[7]);
+aaReal.z=stoi(currentData[8]);
+// [x, y, z] accel sensor measurements
+aa.x=stoi(currentData[10]);
+aa.y=stoi(currentData[11]);
+aa.z=stoi(currentData[12]);
+// [x, y, z] gyro sensor measurements
+gy.x=stoi(currentData[14]);
+gy.y=stoi(currentData[15]);
+gy.z=stoi(currentData[16]);
+
+
 
 }
 
@@ -322,6 +333,33 @@ bool evalDiscrete() {
   // no Trigger found
   debug_output(debug, "No Trigger found");
   return false;
+}
+
+double evalDiscreteSteps() {
+  /* Evaluate inputs into discrete Steps according to the number of thresholds triggered. Result is converted to Percent */
+  
+  stepCount = 0
+  // Absolute Angle
+  + 1*(abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45/100) ///// change to rad for more efficienty
+  + 1*(abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50/100)
+  
+  // Rate of rotation
+  + 1*(abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200/100)
+  + 1*(abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200/100)
+  + 1*(abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200/100)
+  
+  // Acceleration
+  + 1*(abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000/100)
+  + 1*(abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000/100)
+  + 1*(abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000/100)
+  
+  // Direction of Gravity and Momentum
+  + 1*(abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000/100)
+  + 1*(abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100) ;
+
+  // no Trigger found
+  debug_output(debug, std::to_string(stepCount));
+  return stepCount/10;
 }
 
 

@@ -11,7 +11,7 @@ from geneticalgorithm import geneticalgorithm as ga
 
 
 # Constants: configuration and paths
-timeOffset = 7	# delta seconds that calculated timestamp of crash may vary from recorded timestamp.
+timeOffset = 2	# delta seconds that calculated timestamp of crash may vary from recorded timestamp.
 punishment = -1	# negative value added rating for false positives
 dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
 testProgram_rel = "./Bikecrasher.exe"
