@@ -128,7 +128,7 @@ def runSimulation(genome, debug=0):
 					nearestExpectedTimestamp = min(timestampsExpected, key=lambda t: abs(timestampReturned - t).total_seconds())
 					# rate this stamp mith percentage confidence
 					ratingCurrentFile += pointsByTime((timestampReturned - nearestExpectedTimestamp).total_seconds()) * percent
-				printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} length: {} file: {}\n".format(ratingCurrentFile, timeWithPropability[1], len(timeWithPropability), os.path.basename(filename)))
+				printDebug(debug-2, "\nRight! Crash was detected.\t Rating: {}\t\t returned: {} length: {} file: {}\n".format(ratingCurrentFile, timeWithPropability[0], len(timeWithPropability), os.path.basename(filename)))
 			else:
 				ratingCurrentFile = punishment
 				printDebug(debug-2, "\nWrong! No crash detected.\t Rating: {}\t\t returned: {} expected: {} file: {}\n".format(ratingCurrentFile, None, ", ".join(solutions), os.path.basename(filename)))
@@ -160,23 +160,26 @@ def printDebug(debug, *strings):
 
 
 def runGA(generations=15, populationSize=30):
-	varbound=np.array([[0,1000]]*13)
+	# Limits of Thresholds
+	numParams=13
+	varbound=np.array([[0,1000]]*numParams)
 
 	algorithm_param = {'max_num_iteration':generations,\
 					   'population_size':populationSize,\
-					   'mutation_probability':0.15,\
+					   'mutation_probability':0.2,\
 					   'elit_ratio': 0.01,\
 					   'crossover_probability': 0.5,\
 					   'parents_portion': 0.3,\
 					   'crossover_type':'uniform',\
-					   'max_iteration_without_improv':20}
+					   'max_iteration_without_improv':30}
 
 	model=ga(function=runSimulation,\
-				dimension=13,\
+				dimension=numParams,\
 				variable_type='real',\
 				variable_boundaries=varbound,\
 				algorithm_parameters=algorithm_param)
 
+	# GA start
 	model.run()
 
 
