@@ -142,7 +142,7 @@ if __name__ == "__main__":
 	y = 'y'
 	z = 'z'
 	dirname = os.path.dirname(__file__)
-	testProgram_rel = "../Optimization/Bikecrasher.exe" if 'w' in sys.platform else "./a.out"
+	testProgram_rel = "../Optimization/Bikecrasher.exe" if 'w' in sys.platform else "../Optimization/a.out"
 	testProgram = os.path.join(dirname, testProgram_rel)
 
 	# get file of wanted data
