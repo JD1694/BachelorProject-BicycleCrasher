@@ -10,6 +10,7 @@ Visualizes Data obtained from DataCollection_Client.py. Plots data (acceleromete
 import sys
 import os
 from datetime import datetime
+import subprocess # to test crash detection program on plotted data
 import matplotlib.gridspec as gridspec  # for subplot organisation
 from matplotlib import pyplot as plt
 
@@ -140,6 +141,10 @@ if __name__ == "__main__":
 	x = 'x'
 	y = 'y'
 	z = 'z'
+	dirname = os.path.dirname(__file__)
+	testProgram_rel = "../Optimization/Bikecrasher.exe" if 'w' in sys.platform else "./a.out"
+	testProgram = os.path.join(dirname, testProgram_rel)
+
 	# get file of wanted data
 	filename = getFilename()
 	
@@ -152,9 +157,40 @@ if __name__ == "__main__":
 	# prepare and convert data
 	data, dataTypes, tOffset = readData(data_log)
 
+	# ask to run detection tool
+	addTestrun = "y" in input("Test {} on this data? (y/n)\t".format(testProgram_rel))
+	result_t = []
+	result_y = []
+	result_y_expanded = []
+	# run detection tool
+	if addTestrun:
+		genome_raw = input("Enter threshold parameters seperated by a space:")
+		genome = [i.strip() for i in genome_raw.split()]
+		arg = [testProgram, filename, *genome] #convert np array to str
+		result = subprocess.run(arg, capture_output=True)
+		result_str = result.stdout.decode().strip()
+		print("\nResult from detection:\n", len(result_str), result_str)
+		if result_str:
+			# convert output
+			for line in result_str.split("\n"):
+				split_line = line.split()
+				result_t.append((datetime.strptime(split_line[0], dateFormat) - tOffset).total_seconds())
+				result_y.append(float(split_line[-1]))
+			for time_step in data[t]:
+				nothingAdded = True
+				for idx, retruned_stamp in enumerate(result_t):
+					if retruned_stamp == time_step:
+						result_y_expanded.append(result_y[idx])
+						nothingAdded = False
+				if nothingAdded:
+					result_y_expanded.append(0)
+		else:
+			print("Cannot test {} on this data. Return is empty.".format(testProgram_rel))
+			addTestrun = False
+
 	# setup plots
 	fig = plt.figure()
-	grid = gridspec.GridSpec(ncols=1, nrows=len(dataTypes))
+	grid = gridspec.GridSpec(ncols=1, nrows=len(dataTypes) + 1*addTestrun)
 	
 	# plot data
 	ax = {} #axis that hold plot
@@ -170,6 +206,12 @@ if __name__ == "__main__":
 		ax[dataType].plot(data[t][:cutExcessIdx_Y], data[dataType][y][:cutExcessIdx_Y])
 		ax[dataType].plot(data[t][:cutExcessIdx_Z], data[dataType][z][:cutExcessIdx_Z])
 
+	# plot detection output
+	if addTestrun:
+		result_axis = fig.add_subplot(grid[len(dataTypes),0])
+		result_axis.set_title("Detection results")
+		result_axis.plot(data[t], result_y_expanded)
+
 	# add crash timestamps
 	for tstamp in crash_log:
 		tsec = (datetime.strptime(tstamp.strip(), dateFormat) - tOffset).total_seconds()
@@ -179,3 +221,4 @@ if __name__ == "__main__":
 			ax[dataType] .vlines(tsec, ymin, ymax, colors='r', linestyles='solid', label='Crash')
 		
 	plt.show()
+	
