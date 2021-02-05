@@ -66,9 +66,11 @@ if __name__ == "__main__":
 		
 			# save changes
 			with open(os.path.join(path2logs, filename), "w") as f:
+				print("Speicherpfad:",os.path.join(path2logs, filename))
 				joined1 = [", ".join(splitLines) for splitLines in content_fixed]
 				joined2 = "\n".join(joined1)
 				f.writelines(joined2)
+				print("was gespeichert wird /n",joined2[:5])
 
 		# plot new file
 		plot = subprocess.Popen([sys.executable, os.path.join(dirname, "PlotCrash.py"), os.path.join(path2logs, filename)],\

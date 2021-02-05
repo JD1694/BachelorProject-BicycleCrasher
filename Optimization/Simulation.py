@@ -12,7 +12,7 @@ iterations = 6		# number of random files to test
 timeOffset = 7	# delta seconds that calculated timestamp of crash may vary from recorded timestamp.
 punishment = -1		# negative value added rating for false positives
 dateFormat = "%Y-%m-%d_%H-%M-%S-%f"
-testProgram_rel = "./Bikecrasher.exe"
+testProgram_rel = "./a.out"
 path2logs_rel = "./../Python-Tests-Analyse/logs/"
 
 normalDrivingLog1_rel = "normalesfahren_2020-12-18_17-51-07.txt" # against false positives

@@ -1,6 +1,6 @@
 """
 General:
-Asks for a .txt or .csv file of logged data in the form of: "timestamp(%Y-%m-%d_%H-%M-%S-%f),  descriptor_1, x_1, y_1, z_1,  descriptor_2, x_2, y_2, z_2,  ... \n"
+Asks for a .txt or .csv file of logged data in the form of: timestamp(%Y-%m-%d_%H-%M-%S-%f),  descriptor_1, x_1, y_1, z_1,  descriptor_2, x_2, y_2, z_2,  ... \n
 The x,y and z data for each descriptor is plotted over time. x,y and z are not combined into one Graph.
 A second file (same name as data file with "_timestamp" appended) is read. It contains timestamps that are marked in the other plots as red lines.
 Used for:
