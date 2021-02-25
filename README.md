@@ -13,5 +13,6 @@ Link to video footage of crash tests:
 Authors:
 - Max-Ole von Waldow
 - Julian Denker
+
 Supervised by:
 - Prof. Dr. Georg Schildbach
