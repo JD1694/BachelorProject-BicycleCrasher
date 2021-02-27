@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include "time.h"
 #include <I2Cdev.h>
-#include "MPU6050_6Axis_MotionApps20.h"
+#include <MPU6050_6Axis_MotionApps20.h>
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include "Wire.h"
 #endif
@@ -127,11 +127,11 @@ void setup() {
 
   // connect to WiFi
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
+  /* while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.println("...");
   }
- 
+ */
   Serial.print("WiFi connected with IP: ");
   Serial.println(WiFi.localIP());
 
@@ -156,7 +156,7 @@ void loop() {
     Serial.println("Connected to server successful!");
 
     // repeat getting and sending data
-    while (client.connected()) {
+    while (!client.connected()) {
   
       if (!dmpReady) return;
       // read a packet from FIFO
