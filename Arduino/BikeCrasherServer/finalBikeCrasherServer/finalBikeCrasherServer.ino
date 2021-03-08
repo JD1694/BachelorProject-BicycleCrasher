@@ -7,7 +7,19 @@
 #include "Wire.h"
 
 
-float threshholds[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 11, 12, 13, 14};
+float threshholds[] = { 50.41649852, 
+                        312.41631607, 
+                        941.86966547, 
+                        489.9528661, 
+                        596.17546761, 
+                        861.43288347, 
+                        82.45992038, 
+                        93.90663596, 
+                        628.08448713, 
+                        688.82112735, 
+                        638.62796796, 
+                        255.40699726, 
+                        532.64472836 };
 float THRESHOLD_SMOOTH_GYRO_X = threshholds[1];
 float THRESHOLD_SMOOTH_GYRO_Y = threshholds[2];
 float THRESHOLD_SMOOTH_GYRO_Z = threshholds[3];
@@ -76,13 +88,14 @@ float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and
 VectorFloat rotateZreturnVal;
 
 float crashPropability;
+String crashCause = "";
 
 const char *ssid = "TestAP";
 const char *pass = "passwort";
 
 MPU6050 mpu(0x68);
-
 WiFiServer server(80);
+
 
 void setup() {
 
@@ -91,8 +104,8 @@ void setup() {
 
   //start serialmonitor
   Serial.begin(115200);
+  while (!Serial);
   Serial.println();
-  Serial.println("Accesspoint wird konfiguriert");
 
   // initialize device
   Serial.println(F("Initializing I2C devices..."));
@@ -142,6 +155,7 @@ void setup() {
 
 
   //start access point
+  Serial.println("Accesspoint wird konfiguriert");
   WiFi.softAP(ssid, pass);
 
   Serial.print("IP: ");
@@ -150,7 +164,12 @@ void setup() {
   Serial.println("Server ready");
 }
 
+
 void loop() {
+  // check if DPM is ready and get latest packet (also used as check)
+  if (!dmpReady) return;
+  if (!mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) return;
+  
   WiFiClient client = server.available();
   // Get sensor readings
   getSensorReadings();
@@ -159,7 +178,7 @@ void loop() {
 
   // Evaluate inputs
   crashPropability = evalDiscreteSteps();
-
+  Serial.println(crashPropability);
 
   if (client) {                     //established connection
     Serial.println("Connected client");
@@ -174,9 +193,11 @@ void loop() {
             client.println("Content-type:text/html");
             client.println();
 
-            client.print("Crashwahrscheinlichkeit:");
+            client.print("Crash Propability:");
             client.println(crashPropability);
-            client.println("Sensorwerte:");
+            client.print("Crash Cause:");
+            client.println(crashCause);
+            /*client.println("Sensorwerte:");
             client.print("\n Gyro X: \n");
             client.println(gyroSmoothend.x);
             client.print("\n Gyro Y: \n");
@@ -188,7 +209,7 @@ void loop() {
             client.print("\n P: \n");
             client.println(ypr[1]);
             client.print("\n R \n");
-            client.println(ypr[2]);
+            client.println(ypr[2]);*/
             client.println("<a href=\"/\">Refresh</a>");
             client.println(); //end http response
             break;
@@ -206,52 +227,29 @@ void loop() {
     Serial.println("Client disconnected");
   }
 }
+
+
 void getSensorReadings() {
-  // Get sensor readings from IMU
+  /* Get sensor readings from IMU */
   mpu.dmpGetQuaternion(&q, fifoBuffer);
-  Serial.println(q.x);
   mpu.dmpGetGravity(&gravity, &q);
   mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-  Serial.println(ypr[1]);
-  // display real acceleration, adjusted to remove gravity
+  // real acceleration, adjusted to remove gravity
   mpu.dmpGetAccel(&aa, fifoBuffer);
-  Serial.println(aa.x);
   mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-  Serial.println(aaReal.x);
   mpu.dmpGetGyro(&gy, fifoBuffer);
-  Serial.println(gy.x);
 }
+
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
-  /* Prepare data, filter and convert to get more measurable input */
+  
   // rotate used sensor data to new cood system
-
   rotateZ( rotateZAngle, aa, &aa_rot );
   rotateZ( rotateZAngle, aaReal, &aaReal_rot );
   rotateZ( rotateZAngle, gy, &gy_rot );
   //rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
 
-
-  /*
-    // add new readings to collection (FIFO of length FIFO_INT_LENGTH_BIG) (Exponential Moving Average possible?)
-    if (fifo_aaReal.isFull()){
-      last_aaReal = fifo_aaReal.shift();
-      // integrate acceleration over the last fraction of a second: add newest, remove oldest value
-      accelIntegral.x = accelIntegral.x + aaReal.x - last_aaReal.x;
-      accelIntegral.y = accelIntegral.y + aaReal.y - last_aaReal.y;
-      accelIntegral.z = accelIntegral.z + aaReal.z - last_aaReal.z;
-    }
-    if (fifo_aa.isFull()){
-      last_aa = fifo_aa.shift();
-      // Accel with Gravity
-      accelGravityIntegral.x = accelGravityIntegral.x + aa.x - last_aa.x;
-      accelGravityIntegral.y = accelGravityIntegral.y + aa.y - last_aa.y;
-      accelGravityIntegral.z = accelGravityIntegral.z + aa.z - last_aa.z;
-    }
-    fifo_aaReal.push(aaReal);
-    fifo_aa.push(aa);
-  */
   // Filter rotated aaReal data (Exponential Moving Average)
   accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.x * MOVING_AVERAGE_DECLINE;
   accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.y * MOVING_AVERAGE_DECLINE;
@@ -277,18 +275,13 @@ void prepareData() {
   former_y = accelIntegral.y * MOVING_AVERAGE_DECLINE + former_y * (1 - MOVING_AVERAGE_DECLINE);
   former_z = accelIntegral.z * MOVING_AVERAGE_DECLINE + former_z * (1 - MOVING_AVERAGE_DECLINE);
 }
+
+
 double norm(double a, double b, double c) {
   /* Calculates the euclidian norm of a vektor consisting of the 3 given values*/
   return sqrt( sq(delta_x) + sq(delta_y) + sq(delta_z) );
 }
 
-double sigmoid_function(double x) {
-  /*
-      A fast implementation (without exp(-x)) of the Sigmoid activation curve, modified to return return percentages.
-      Returns results between 0 (for very negative x) and 1 (for very positive x)
-      centered around x=0 where 0.5 is returned*/
-  return x / (2 * (1 + abs(x))) + 0.5;
-}
 
 void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
 
@@ -303,17 +296,21 @@ void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
   return;
 }
 
+
 void rotateZ(float radAngle, float point[3], float *rotatedPoint ) {
   /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
-  *rotatedPoint     = cos(radAngle) * point[0] - sin(radAngle) * point[1];
+  * rotatedPoint      = cos(radAngle) * point[0] - sin(radAngle) * point[1];
   *(rotatedPoint + 1) = sin(radAngle) * point[0] + cos(radAngle) * point[1];
   *(rotatedPoint + 2) = point[2];
   return;
 }
+
+
 double evalDiscreteSteps() {
   /* Evaluate inputs into discrete Steps according to the number of thresholds triggered. Result is converted to Percent */
-
+  crashCause = "";
   stepCount = 0
+              /*
               // Absolute Angle
               + 1 * (abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH * 45 / 100) ///// change to rad for more efficienty
               + 1 * (abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL * 50 / 100)
@@ -334,9 +331,41 @@ double evalDiscreteSteps() {
 
               // Change in Acceleration
               + 1 * (abs(accel_delta) > THRESHOLD_ACCEL_DELTA * 10000 / 100)
+              ;*/
+              // Absolute Angle
+              + 1 * checkThreshold(abs(ypr[1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
+              + 1 * checkThreshold(abs(ypr[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
+
+              // Rate of rotation
+              + 1 * checkThreshold(abs(gyroSmoothend.x), THRESHOLD_SMOOTH_GYRO_X * 200 / 100, "THRESHOLD_SMOOTH_GYRO_X")
+              + 1 * checkThreshold(abs(gyroSmoothend.y), THRESHOLD_SMOOTH_GYRO_Y * 200 / 100, "THRESHOLD_SMOOTH_GYRO_Y")
+              + 1 * checkThreshold(abs(gyroSmoothend.z), THRESHOLD_SMOOTH_GYRO_Z * 200 / 100, "THRESHOLD_SMOOTH_GYRO_Z")
+
+              // Acceleration
+              + 1 * checkThreshold(abs(accelIntegral.x), THRESHOLD_INT_ACCEL_X * 10000 / 100, "THRESHOLD_INT_ACCEL_X")
+              + 1 * checkThreshold(abs(accelIntegral.y), THRESHOLD_INT_ACCEL_Y * 10000 / 100, "THRESHOLD_INT_ACCEL_Y")
+              + 1 * checkThreshold(abs(accelIntegral.z), THRESHOLD_INT_ACCEL_Z * 10000 / 100, "THRESHOLD_INT_ACCEL_Z")
+
+              // Direction of Gravity and Momentum
+              + 1 * checkThreshold(abs(accelGravityIntegral.x), THRESHOLD_INT_GRAVITY_X * 10000 / 100, "THRESHOLD_INT_GRAVITY_X")
+              + 1 * checkThreshold(abs(accelGravityIntegral.y), THRESHOLD_INT_GRAVITY_Y * 10000 / 100, "THRESHOLD_INT_GRAVITY_Y")
+
+              // Change in Acceleration
+              + 1 * checkThreshold(abs(accel_delta), THRESHOLD_ACCEL_DELTA * 10000 / 100, "THRESHOLD_ACCEL_DELTA")
               ;
 
-  // no Trigger found
-
   return stepCount / 11;
+}
+
+bool checkThreshold(double liveData, double thresholdVal, String thresholdName){
+  if (liveData > thresholdVal){
+    Serial.print("Triggered: ");
+    Serial.println(thresholdName);
+    crashCause += thresholdName;
+    crashCause += ", \n";
+    return true;
+  }
+  else{
+    return false;
+  }
 }
