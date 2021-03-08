@@ -191,12 +191,26 @@ void loop() {
           if (currentLine.length() == 0) {
             client.println("HTTP/1.1 200 OK"); //send HTTP header for text
             client.println("Content-type:text/html");
+            client.println("Connection: close");
             client.println();
+            client.println("<!DOCTYPE html><html>");
 
+            // header to auto reload page
+            client.println("<head>");
+            client.println("<title>SensorBike - Live data but slow</title>");
+            client.println("<meta http-equiv=\"refresh\" content=\"1\"> </head>");
+            client.println("</head>");
+            client.println("<body>");
+
+            client.print("<p>");
             client.print("Crash Propability:");
-            client.println(crashPropability);
+            client.print(crashPropability);
+            client.println("</p>");
+            
+            client.print("<p>");
             client.print("Crash Cause:");
-            client.println(crashCause);
+            client.print(crashCause);
+            client.println("</p>");
             /*client.println("Sensorwerte:");
             client.print("\n Gyro X: \n");
             client.println(gyroSmoothend.x);
@@ -211,6 +225,8 @@ void loop() {
             client.print("\n R \n");
             client.println(ypr[2]);*/
             client.println("<a href=\"/\">Refresh</a>");
+
+            client.println("</body></html>");
             client.println(); //end http response
             break;
           }
