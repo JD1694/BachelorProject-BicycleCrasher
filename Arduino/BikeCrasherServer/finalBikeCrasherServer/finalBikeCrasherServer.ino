@@ -7,19 +7,20 @@
 #include "Wire.h"
 
 
-float threshholds[] = { 50.41649852, 
-                        312.41631607, 
-                        941.86966547, 
-                        489.9528661, 
-                        596.17546761, 
-                        861.43288347, 
-                        82.45992038, 
-                        93.90663596, 
-                        628.08448713, 
-                        688.82112735, 
-                        638.62796796, 
-                        255.40699726, 
-                        532.64472836 };
+float threshholds[] = { 50.41649852,
+                        312.41631607,
+                        941.86966547,
+                        489.9528661,
+                        596.17546761,
+                        861.43288347,
+                        82.45992038,
+                        93.90663596,
+                        628.08448713,
+                        688.82112735,
+                        638.62796796,
+                        255.40699726,
+                        532.64472836
+                      };
 float THRESHOLD_SMOOTH_GYRO_X = threshholds[1];
 float THRESHOLD_SMOOTH_GYRO_Y = threshholds[2];
 float THRESHOLD_SMOOTH_GYRO_Z = threshholds[3];
@@ -96,6 +97,66 @@ const char *pass = "passwort";
 MPU6050 mpu(0x68);
 WiFiServer server(80);
 
+String requestHMTL = "";
+String header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+String html_1 = R"=====(
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
+  <meta charset='utf-8'>
+  <style>
+    body {font-size:100%;} 
+    #main {display: table; margin: auto;  padding: 0 10px 0 10px; } 
+    h2 {text-align:center; } 
+    p { text-align:center; }
+  </style>
+
+  <script> 
+    function updateData() 
+    {  
+       ajaxLoad('getData'); 
+    }
+
+
+    var ajaxRequest = null;
+    if (window.XMLHttpRequest)  { ajaxRequest =new XMLHttpRequest(); }
+    else                        { ajaxRequest =new ActiveXObject("Microsoft.XMLHTTP"); }
+
+    function ajaxLoad(ajaxURL)
+    {
+      if(!ajaxRequest){ alert('AJAX is not supported.'); return; }
+
+      ajaxRequest.open('GET',ajaxURL,true);
+      ajaxRequest.onreadystatechange = function()
+      {
+        if(ajaxRequest.readyState == 4 && ajaxRequest.status==200)
+        {
+          var ajaxResult = ajaxRequest.responseText.split("|");
+          document.getElementById('crash_propability').innerHTML = "<b>Crash Propability:</b>  " + ajaxResult[0];
+          document.getElementById('crash_cause').innerHTML = "<b>Crash Cause:</b> <br>" + ajaxResult[1];
+        }
+      }
+      ajaxRequest.send();
+    }
+
+    setInterval(updateData, 200);
+
+  </script>
+  <title>SensorBike - Live data</title>
+ </head>
+
+ <body>
+   <div id='main'>
+     <h2>SensorBike - Live data</h2>
+     <div id='data_DIV'>
+       <p id='crash_propability'><b>Crash Propability:</b> 0</p>
+       <p id='crash_cause'><b>Crash Cause:</b> None</p>
+     </div>
+   </div> 
+ </body>
+</html>
+)====="; 
 
 void setup() {
 
@@ -160,6 +221,7 @@ void setup() {
 
   Serial.print("IP: ");
   Serial.println(WiFi.softAPIP());
+  Serial.println(WiFi.localIP()); 
   server.begin();
   Serial.println("Server ready");
 }
@@ -170,7 +232,6 @@ void loop() {
   if (!dmpReady) return;
   if (!mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) return;
   
-  WiFiClient client = server.available();
   // Get sensor readings
   getSensorReadings();
   // Prepare data, filter and convert to get more measurable input
@@ -178,9 +239,29 @@ void loop() {
 
   // Evaluate inputs
   crashPropability = evalDiscreteSteps();
-  Serial.println(crashPropability);
+  //Serial.println(crashPropability);
 
-  if (client) {                     //established connection
+
+  // Serve Data as Website (if client available)
+  WiFiClient client = server.available();
+  if (!client)  { return; }
+  
+  requestHMTL = client.readStringUntil('\r');     // Read the first line of the request
+  //Serial.println(requestHMTL);
+  
+  if ( requestHMTL.indexOf("getData") > 0 ) { 
+    client.print( header );
+    client.print( crashPropability );   client.print( "|" );  client.println( crashCause );
+    client.println(); //end http response
+  }
+  else {
+    client.flush();
+    client.print( header );
+    client.print( html_1 ); 
+    Serial.println("New page served");
+  }
+  
+  /*if (client) {                     //established connection
     Serial.println("Connected client");
     String currentLine = "";         //holds incoming data
     while (client.connected()) {
@@ -211,19 +292,19 @@ void loop() {
             client.print("Crash Cause:");
             client.print(crashCause);
             client.println("</p>");
-            /*client.println("Sensorwerte:");
-            client.print("\n Gyro X: \n");
-            client.println(gyroSmoothend.x);
-            client.print("\n Gyro Y: \n");
-            client.println(gyroSmoothend.y);
-            client.print("\n Gyro Z: \n");
-            client.println(gyroSmoothend.z);
-            client.print("\n Y: \n");
-            client.println(ypr[0]);
-            client.print("\n P: \n");
-            client.println(ypr[1]);
-            client.print("\n R \n");
-            client.println(ypr[2]);*/
+            //client.println("Sensorwerte:");
+            //client.print("\n Gyro X: \n");
+            //client.println(gyroSmoothend.x);
+            //client.print("\n Gyro Y: \n");
+            //client.println(gyroSmoothend.y);
+            //client.print("\n Gyro Z: \n");
+            //client.println(gyroSmoothend.z);
+            //client.print("\n Y: \n");
+            //client.println(ypr[0]);
+            //client.print("\n P: \n");
+            //client.println(ypr[1]);
+            //client.print("\n R \n");
+            //client.println(ypr[2]);
             client.println("<a href=\"/\">Refresh</a>");
 
             client.println("</body></html>");
@@ -241,7 +322,7 @@ void loop() {
     }
     client.stop();
     Serial.println("Client disconnected");
-  }
+  }*/
 }
 
 
@@ -375,8 +456,8 @@ double evalDiscreteSteps() {
 
 bool checkThreshold(double liveData, double thresholdVal, String thresholdName){
   if (liveData > thresholdVal){
-    Serial.print("Triggered: ");
-    Serial.println(thresholdName);
+    //Serial.print("Triggered: ");
+    //Serial.println(thresholdName);
     crashCause += thresholdName;
     crashCause += ", \n";
     return true;
