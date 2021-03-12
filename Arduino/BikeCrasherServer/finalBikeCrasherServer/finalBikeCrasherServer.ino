@@ -7,7 +7,20 @@
 #include "Wire.h"
 
 
-float threshholds[] = { 50.41649852,
+float threshholds[] = /*{ 44,
+                        605,
+                        360,
+                        535,
+                        649,
+                        524,
+                        815,
+                        308,
+                        468,
+                        102,
+                        905,
+                        741,
+                        38};*/
+{ 50.41649852,
                         312.41631607,
                         941.86966547,
                         489.9528661,
@@ -97,6 +110,7 @@ const char *pass = "passwort";
 MPU6050 mpu(0x68);
 WiFiServer server(80);
 
+// HTML Site with JavaScript. Source: http://www.martyncurrey.com/esp8266-and-the-arduino-ide-part-8-auto-update-webpage/
 String requestHMTL = "";
 String header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 String html_1 = R"=====(
@@ -106,7 +120,7 @@ String html_1 = R"=====(
   <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
   <meta charset='utf-8'>
   <style>
-    body {font-size:100%;} 
+    body {font-size:100%; background-color: #FFFFFF;} 
     #main {display: table; margin: auto;  padding: 0 10px 0 10px; } 
     h2 {text-align:center; } 
     p { text-align:center; }
@@ -135,6 +149,9 @@ String html_1 = R"=====(
           var ajaxResult = ajaxRequest.responseText.split("|");
           document.getElementById('crash_propability').innerHTML = "<b>Crash Propability:</b>  " + ajaxResult[0];
           document.getElementById('crash_cause').innerHTML = "<b>Crash Cause:</b> <br>" + ajaxResult[1];
+          document.getElementById('ypr_live').innerHTML = ajaxResult[2];
+          var unRedtone = 255 - parseFloat(ajaxResult[0],10) * 255;
+          document.body.style.backgroundColor = "rgb(255," + unRedtone + "," + unRedtone + ")";
         }
       }
       ajaxRequest.send();
@@ -152,6 +169,7 @@ String html_1 = R"=====(
      <div id='data_DIV'>
        <p id='crash_propability'><b>Crash Propability:</b> 0</p>
        <p id='crash_cause'><b>Crash Cause:</b> None</p>
+       <p id='ypr_live'><b>None</p>
      </div>
    </div> 
  </body>
@@ -221,7 +239,7 @@ void setup() {
 
   Serial.print("IP: ");
   Serial.println(WiFi.softAPIP());
-  Serial.println(WiFi.localIP()); 
+  // Serial.println(WiFi.localIP()); -> 0.0.0.0 local
   server.begin();
   Serial.println("Server ready");
 }
@@ -251,13 +269,23 @@ void loop() {
   
   if ( requestHMTL.indexOf("getData") > 0 ) { 
     client.print( header );
-    client.print( crashPropability );   client.print( "|" );  client.println( crashCause );
+    client.print( crashPropability );   
+    client.print("|"); client.print( crashCause );
+    client.print("|"); client.print("Y: ");client.print(ypr[0]); client.print(";  P: ");client.print(ypr[1]); client.print(";  R: ");client.println(ypr[2]);
     client.println(); //end http response
   }
   else {
-    client.flush();
+    String currentLine = "";
+    char c = ' ';
+    while (!(currentLine.indexOf("\n\r\n") > 0 )){
+      Serial.print(".");
+      c = client.read();
+      currentLine += c;
+    }
+    client.flush();  //Waits until all outgoing characters in buffer have been sent.
     client.print( header );
-    client.print( html_1 ); 
+    client.print( html_1 );
+    client.println("\n\r\n"); //end http response
     Serial.println("New page served");
   }
   
