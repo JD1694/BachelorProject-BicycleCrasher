@@ -169,7 +169,7 @@ def printDebug(debug, *strings):
 
 def runGA(generations=15, populationSize=30):
 	# Limits of Thresholds
-	numParams=13
+	numParams=11
 	varbound=np.array([[0,1000]]*numParams)
 
 	algorithm_param = {'max_num_iteration':generations,\
@@ -192,6 +192,10 @@ def runGA(generations=15, populationSize=30):
 
 
 if __name__ == "__main__":
+	"""
+	Starts Genetic Algorithm if run without parameters. Promts for Population and Generation size.
+	When parameters are given, the simulation of the given genome will be run once. This is similar to what the GA does many times.
+	"""
 	if sys.argv[1:]:
 		print("Running simulation once with given genome")
 		print(runSimulation(np.array(sys.argv[1:]), debug=3))

@@ -18,7 +18,7 @@ using namespace std;
 float THRESHOLD_SMOOTH_GYRO_X;
 float THRESHOLD_SMOOTH_GYRO_Y;
 float THRESHOLD_SMOOTH_GYRO_Z;
-float THRESHOLD_YAW;
+//float THRESHOLD_YAW; //not needed
 float THRESHOLD_PITCH;
 float THRESHOLD_ROLL;
 float THRESHOLD_INT_ACCEL_X;
@@ -26,8 +26,8 @@ float THRESHOLD_INT_ACCEL_Y;
 float THRESHOLD_INT_ACCEL_Z;
 float THRESHOLD_INT_GRAVITY_X;
 float THRESHOLD_INT_GRAVITY_Y;
-float THRESHOLD_INT_GRAVITY_Z;
-float COMMON_GRAVITY_Z;
+//float THRESHOLD_INT_GRAVITY_Z; //not needed
+//float COMMON_GRAVITY_Z; //not needed
 float THRESHOLD_ACCEL_DELTA;
 
 // Discrete Step counter
@@ -93,31 +93,19 @@ int main(int argc, char *argv[]){
 // Thresholds  to tune
 
 THRESHOLD_SMOOTH_GYRO_X = stof(argv[2]);
-
 THRESHOLD_SMOOTH_GYRO_Y = stof(argv[3]);
-
 THRESHOLD_SMOOTH_GYRO_Z = stof(argv[4]);
-
-THRESHOLD_YAW = stof(argv[5]);
-
-THRESHOLD_PITCH = stof(argv[6]);
-
-THRESHOLD_ROLL = stof(argv[7]);
-
-THRESHOLD_INT_ACCEL_X = stof(argv[8]);
-
-THRESHOLD_INT_ACCEL_Y = stof(argv[9]);
-
-THRESHOLD_INT_ACCEL_Z = stof(argv[10]);
-
-THRESHOLD_INT_GRAVITY_X = stof(argv[11]);
-
-THRESHOLD_INT_GRAVITY_Y = stof(argv[12]);
-
-THRESHOLD_INT_GRAVITY_Z = stof(argv[13]);
-
-THRESHOLD_ACCEL_DELTA = stof(argv[14]);
-COMMON_GRAVITY_Z = 1000;
+//THRESHOLD_YAW = stof(argv[5]); //not needed
+THRESHOLD_PITCH = stof(argv[5]); // prev argv[6]
+THRESHOLD_ROLL = stof(argv[6]); // prev argv[7]
+THRESHOLD_INT_ACCEL_X = stof(argv[7]); // prev argv[8]
+THRESHOLD_INT_ACCEL_Y = stof(argv[8]); // prev argv[9]
+THRESHOLD_INT_ACCEL_Z = stof(argv[9]); // prev argv[10]
+THRESHOLD_INT_GRAVITY_X = stof(argv[10]); // prev argv[11]
+THRESHOLD_INT_GRAVITY_Y = stof(argv[11]); // prev argv[12]
+//THRESHOLD_INT_GRAVITY_Z = stof(argv[13]); //not needed
+THRESHOLD_ACCEL_DELTA = stof(argv[12]); // prev argv[14]
+//COMMON_GRAVITY_Z = 1000; //not needed
 
 //set true for debugging output:
 //debug = argv[argc].find("debug")!=std::string::npos;
@@ -258,7 +246,7 @@ void prepareData() {
   rotateZ( rotateZAngle, aa, &aa_rot );
   rotateZ( rotateZAngle, aaReal, &aaReal_rot );
   rotateZ( rotateZAngle, gy, &gy_rot );
-  //rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+  rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
   
   
 /*
@@ -377,7 +365,7 @@ double evalDiscreteSteps() {
   return stepCount/11;
 }
 
-
+#if 0
 double evalContinuous() {
   /* Evaluate inputs into continuous categories: Propability of Crash */
   /* Notes: square may not have methods in arg*/
@@ -414,6 +402,7 @@ double evalContinuous() {
   // convert to useable and capped percentage result
   return sigmoid_function(continuous_rating/normalized_continuous_rating - 1);
 }
+#endif
 
 
 double norm(double a, double b, double c){
