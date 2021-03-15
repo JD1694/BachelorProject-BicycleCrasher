@@ -88,7 +88,7 @@ def runSimulation(genome, debug=0):
 	printDebug(debug, genome)
 
 	# most log files are flawed, use manual chosen files instead
-	filelist = [crashLog1, crashLog2, crashLog3, crashLog4, normalDrivingLog1, normalDrivingLog2,crashLog5,crashLog6,crashLog7,crashLog8]
+	filelist = [crashLog1, crashLog2, crashLog3, crashLog4, normalDrivingLog1, normalDrivingLog2, crashLog5, crashLog6, crashLog7, crashLog8]
 
 	
 	for filename in filelist:

@@ -19,7 +19,7 @@ float threshholds[] = /*{ 44,
                         102,
                         905,
                         741,
-                        38};*/
+                        38};
 {                       50.41649852, //0
                         312.41631607,//1
                         941.86966547,//2
@@ -34,7 +34,8 @@ float threshholds[] = /*{ 44,
                         //255.40699726,
                         //532.64472836
                         //missing
-                      };
+                      };*/
+                      {37.78, 33.34, 1002, 282, 349.80, 76.48, 120.48, 1002, 1002, 146, 33.88};
 float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]; //needed
 float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]; //needed
 float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]; //needed
