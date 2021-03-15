@@ -339,25 +339,25 @@ double evalDiscreteSteps() {
   
   stepCount = 0
   // Absolute Angle
-  + 1*(abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45/100) ///// change to rad for more efficienty
-  + 1*(abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50/100)
+  + 1*(abs(ypr[1] * 180 / M_PI) > THRESHOLD_PITCH*45/100)*(THRESHOLD_PITCH!=0) ///// change to rad for more efficienty
+  + 1*(abs(ypr[2] * 180 / M_PI) > THRESHOLD_ROLL*50/100)*(THRESHOLD_ROLL!=0)
   
   // Rate of rotation
-  + 1*(abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200/100)
-  + 1*(abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200/100)
-  + 1*(abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200/100)
+  + 1*(abs(gyroSmoothend.x) > THRESHOLD_SMOOTH_GYRO_X*200/100)*(THRESHOLD_SMOOTH_GYRO_X!=0)
+  + 1*(abs(gyroSmoothend.y) > THRESHOLD_SMOOTH_GYRO_Y*200/100)*(THRESHOLD_SMOOTH_GYRO_Y!=0)
+  + 1*(abs(gyroSmoothend.z) > THRESHOLD_SMOOTH_GYRO_Z*200/100)*(THRESHOLD_SMOOTH_GYRO_Z!=0)
   
   // Acceleration
-  + 1*(abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000/100)
-  + 1*(abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000/100)
-  + 1*(abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000/100)
+  + 1*(abs(accelIntegral.x) > THRESHOLD_INT_ACCEL_X*10000/100)*(THRESHOLD_INT_ACCEL_X!=0)
+  + 1*(abs(accelIntegral.y) > THRESHOLD_INT_ACCEL_Y*10000/100)*(THRESHOLD_INT_ACCEL_Y!=0)
+  + 1*(abs(accelIntegral.z) > THRESHOLD_INT_ACCEL_Z*10000/100)*(THRESHOLD_INT_ACCEL_Z!=0)
   
   // Direction of Gravity and Momentum
-  + 1*(abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000/100)
-  + 1*(abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100)
+  + 1*(abs(accelGravityIntegral.x) > THRESHOLD_INT_GRAVITY_X*10000/100)*(THRESHOLD_INT_GRAVITY_X!=0)
+  + 1*(abs(accelGravityIntegral.y) > THRESHOLD_INT_GRAVITY_Y*10000/100)*(THRESHOLD_INT_GRAVITY_Y!=0)
   
   // Change in Acceleration
-  + 1*(abs(accel_delta)>THRESHOLD_ACCEL_DELTA*10000/100)
+  + 1*(abs(accel_delta)>THRESHOLD_ACCEL_DELTA*10000/100)*(THRESHOLD_ACCEL_DELTA!=0)
   ;
 
   // no Trigger found
