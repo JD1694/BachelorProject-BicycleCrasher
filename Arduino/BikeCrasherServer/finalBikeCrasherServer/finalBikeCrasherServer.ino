@@ -20,34 +20,35 @@ float threshholds[] = /*{ 44,
                         905,
                         741,
                         38};*/
-{ 50.41649852,
-                        312.41631607,
-                        941.86966547,
-                        489.9528661,
-                        596.17546761,
-                        861.43288347,
-                        82.45992038,
-                        93.90663596,
-                        628.08448713,
-                        688.82112735,
-                        638.62796796,
-                        255.40699726,
-                        532.64472836
+{                       50.41649852, //0
+                        312.41631607,//1
+                        941.86966547,//2
+                       // 489.9528661,
+                        596.17546761,//3
+                        861.43288347,//4
+                        82.45992038,//5
+                        93.90663596,//6
+                        628.08448713,//7
+                        688.82112735,//8
+                        638.62796796//9
+                        //255.40699726,
+                        //532.64472836
+                        //missing
                       };
-float THRESHOLD_SMOOTH_GYRO_X = threshholds[1];
-float THRESHOLD_SMOOTH_GYRO_Y = threshholds[2];
-float THRESHOLD_SMOOTH_GYRO_Z = threshholds[3];
-float THRESHOLD_YAW = threshholds[4];
-float THRESHOLD_PITCH = threshholds[5];
-float THRESHOLD_ROLL = threshholds[6];
-float THRESHOLD_INT_ACCEL_X = threshholds[7];
-float THRESHOLD_INT_ACCEL_Y = threshholds[8];
-float THRESHOLD_INT_ACCEL_Z = threshholds[9];
-float THRESHOLD_INT_GRAVITY_X = threshholds[10];
-float THRESHOLD_INT_GRAVITY_Y = threshholds[11];
-float THRESHOLD_INT_GRAVITY_Z = threshholds[12];
-float COMMON_GRAVITY_Z = threshholds[13];
-float THRESHOLD_ACCEL_DELTA = threshholds[14];
+float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]; //needed
+float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]; //needed
+float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]; //needed
+//float THRESHOLD_YAW = threshholds[4]; //not needed
+float THRESHOLD_PITCH = threshholds[3]; //needed
+float THRESHOLD_ROLL = threshholds[4]; //needed
+float THRESHOLD_INT_ACCEL_X = threshholds[5];  //needed
+float THRESHOLD_INT_ACCEL_Y = threshholds[6]; //needed
+float THRESHOLD_INT_ACCEL_Z = threshholds[7]; //needed
+float THRESHOLD_INT_GRAVITY_X = threshholds[8]; //needed
+float THRESHOLD_INT_GRAVITY_Y = threshholds[9]; //needed
+//float THRESHOLD_INT_GRAVITY_Z = threshholds[12];  //not needed
+//float COMMON_GRAVITY_Z = threshholds[13]; //not needed
+float THRESHOLD_ACCEL_DELTA = threshholds[10]; //needed
 
 
 // Discrete Step counter
@@ -94,7 +95,7 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 // rotated to new coord sys
-float rotateZAngle = 0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
+float rotateZAngle = -0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
 VectorFloat aa_rot;         // [x, y, z]            accel sensor measurements
 VectorFloat gy_rot;         // [x, y, z]            gyro sensor measurements
 VectorFloat aaReal_rot;     // [x, y, z]            gravity-free accel sensor measurements
@@ -271,7 +272,7 @@ void loop() {
     client.print( header );
     client.print( crashPropability );   
     client.print("|"); client.print( crashCause );
-    client.print("|"); client.print("Y: ");client.print(ypr[0]); client.print(";  P: ");client.print(ypr[1]); client.print(";  R: ");client.println(ypr[2]);
+    client.print("|"); client.print("Y: ");client.print(ypr_rot[0]*180 / M_PI); client.print(";  P: ");client.print(ypr_rot[1]*180 / M_PI); client.print(";  R: ");client.println(ypr_rot[2]*180 / M_PI);
     client.println(); //end http response
   }
   else {
@@ -373,7 +374,7 @@ void prepareData() {
   rotateZ( rotateZAngle, aa, &aa_rot );
   rotateZ( rotateZAngle, aaReal, &aaReal_rot );
   rotateZ( rotateZAngle, gy, &gy_rot );
-  //rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+  rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
 
   // Filter rotated aaReal data (Exponential Moving Average)
   accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.x * MOVING_AVERAGE_DECLINE;
@@ -410,11 +411,11 @@ double norm(double a, double b, double c) {
 
 void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
 
-  VectorFloat returnVal;
 
-  returnVal.x = cos(radAngle) * point.x - sin(radAngle) * point.y;
-  returnVal.y = sin(radAngle) * point.x + cos(radAngle) * point.y;
-  *rotatedPoint = returnVal;
+
+  rotateZreturnVal.x = cos(radAngle) * point.x - sin(radAngle) * point.y;
+  rotateZreturnVal.y = sin(radAngle) * point.x + cos(radAngle) * point.y;
+  *rotatedPoint = rotateZreturnVal;
 
   //delete &returnVal;
 
@@ -458,8 +459,8 @@ double evalDiscreteSteps() {
               + 1 * (abs(accel_delta) > THRESHOLD_ACCEL_DELTA * 10000 / 100)
               ;*/
               // Absolute Angle
-              + 1 * checkThreshold(abs(ypr[1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
-              + 1 * checkThreshold(abs(ypr[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
+              + 1 * checkThreshold(abs(ypr_rot[1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
+              + 1 * checkThreshold(abs(ypr_rot[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
 
               // Rate of rotation
               + 1 * checkThreshold(abs(gyroSmoothend.x), THRESHOLD_SMOOTH_GYRO_X * 200 / 100, "THRESHOLD_SMOOTH_GYRO_X")
