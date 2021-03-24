@@ -214,13 +214,13 @@ if __name__ == "__main__":
 						rotData[y].append(rotPoint[1])
 						rotData[z].append(rotPoint[2])
 
-					ax[old_new][dataType].plot(rotData[x], label=x if dataType!="ypr" else "Roll")
+					ax[old_new][dataType].plot(rotData[x], label=x if dataType!="ypr" else "Yaw")
 					ax[old_new][dataType].plot(rotData[y], label=y if dataType!="ypr" else "Pitch")
-					ax[old_new][dataType].plot(rotData[z], label=z if dataType!="ypr" else "Yaw")
+					ax[old_new][dataType].plot(rotData[z], label=z if dataType!="ypr" else "Roll")
 				else:
-					ax[old_new][dataType].plot(data[dataType][x], label=x if dataType!="ypr" else "Roll")
+					ax[old_new][dataType].plot(data[dataType][x], label=x if dataType!="ypr" else "Yaw")
 					ax[old_new][dataType].plot(data[dataType][y], label=y if dataType!="ypr" else "Pitch")
-					ax[old_new][dataType].plot(data[dataType][z], label=z if dataType!="ypr" else "Yaw")
+					ax[old_new][dataType].plot(data[dataType][z], label=z if dataType!="ypr" else "Roll")
 				ax[old_new][dataType].legend(loc='upper left')
 				#ax[old_new][dataType].set_xlabel("t in [s]")
 		

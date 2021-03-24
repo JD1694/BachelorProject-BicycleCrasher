@@ -152,6 +152,7 @@ String html_1 = R"=====(
           document.getElementById('crash_propability').innerHTML = "<b>Crash Propability:</b>  " + ajaxResult[0];
           document.getElementById('crash_cause').innerHTML = "<b>Crash Cause:</b> <br>" + ajaxResult[1];
           document.getElementById('ypr_live').innerHTML = ajaxResult[2];
+          document.getElementById('gyro_live').innerHTML = ajaxResult[3];
           var unRedtone = 255 - parseFloat(ajaxResult[0],10) * 255;
           document.body.style.backgroundColor = "rgb(255," + unRedtone + "," + unRedtone + ")";
         }
@@ -159,7 +160,7 @@ String html_1 = R"=====(
       ajaxRequest.send();
     }
 
-    setInterval(updateData, 200);
+    setInterval(updateData, 50);
 
   </script>
   <title>SensorBike - Live data</title>
@@ -171,7 +172,8 @@ String html_1 = R"=====(
      <div id='data_DIV'>
        <p id='crash_propability'><b>Crash Propability:</b> 0</p>
        <p id='crash_cause'><b>Crash Cause:</b> None</p>
-       <p id='ypr_live'><b>None</p>
+       <p id='ypr_live'>None</p>
+       <p id='gyro_live'>None</p>
      </div>
    </div> 
  </body>
@@ -211,8 +213,8 @@ void setup() {
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
-    //mpu.CalibrateAccel(6);
-    //mpu.CalibrateGyro(6);
+    mpu.CalibrateAccel(6);
+    mpu.CalibrateGyro(6);
     mpu.PrintActiveOffsets();
     // turn on the DMP, now that it's ready
     Serial.println(F("Enabling DMP..."));
@@ -275,7 +277,8 @@ void loop() {
     client.print( header );
     client.print( crashPropability );   
     client.print("|"); client.print( crashCause );
-    client.print("|"); client.print("Y: ");client.print(ypr_rot[0]*180 / M_PI); client.print(";  P: ");client.print(ypr_rot[1]*180 / M_PI); client.print(";  R: ");client.println(ypr_rot[2]*180 / M_PI);
+    client.print("|"); client.print("Yaw: ");client.print(ypr_rot[0]*180 / M_PI); client.print(";  Pitch: ");client.print(ypr_rot[1]*180 / M_PI); client.print(";  Roll: ");client.print(ypr_rot[2]*180 / M_PI);
+    client.print("|"); client.print("G_x: ");client.print(gy.x); client.print(";  G_y: ");client.print(gy.y); client.print(";  G_z: ");client.println(gy.z);
     client.println(); //end http response
   }
   else {
@@ -418,6 +421,7 @@ void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
 
   rotateZreturnVal.x = cos(radAngle) * point.x - sin(radAngle) * point.y;
   rotateZreturnVal.y = sin(radAngle) * point.x + cos(radAngle) * point.y;
+  rotateZreturnVal.z = point.z;
   *rotatedPoint = rotateZreturnVal;
 
   //delete &returnVal;
