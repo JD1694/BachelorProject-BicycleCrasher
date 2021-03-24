@@ -422,6 +422,7 @@ double sigmoid_function(double x){
 void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ){
   rotateZreturnVal.x = cos(radAngle)*point.x - sin(radAngle)*point.y;
   rotateZreturnVal.y = sin(radAngle)*point.x + cos(radAngle)*point.y;
+  rotateZreturnVal.z = point.z;
   *rotatedPoint = rotateZreturnVal;
   //delete &rotateZreturnVal;
   return;

@@ -72,7 +72,7 @@ def antiFalsePositive(secondsLeft):
 	""" Used in case of a log file without a crash. Generally negative when a crash is detected nevertheless. 
 	More points are given, the later the false positive is made. 
 	Param: seconds left from timestamp of detecetion until EOF (End Of File)"""
-	return -secondsLeft
+	return -0.01*secondsLeft
 
 
 def runSimulation(genome, debug=0):
@@ -179,7 +179,7 @@ def optimizeSingleThreshold(thresholdIdx, resolution=4, thresholdRange=[0,1000])
 	while(thres>=thresholdRange[0]):
 		thresholdList[thresholdIdx] = thres
 		score = runSimulation(thresholdList)
-		if score < bestScore: # GA optimized for lowest value. Do same for minimal change
+		if score <= bestScore: # GA optimized for lowest value. Do same for minimal change
 			bestThreshold = thres
 			bestScore = score
 		thres -= resolution
