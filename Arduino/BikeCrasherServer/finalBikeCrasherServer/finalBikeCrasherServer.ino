@@ -211,8 +211,8 @@ void setup() {
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
     // Calibration Time: generate offsets and calibrate our MPU6050
-    mpu.CalibrateAccel(6);
-    mpu.CalibrateGyro(6);
+    //mpu.CalibrateAccel(6);
+    //mpu.CalibrateGyro(6);
     mpu.PrintActiveOffsets();
     // turn on the DMP, now that it's ready
     Serial.println(F("Enabling DMP..."));
@@ -259,8 +259,10 @@ void loop() {
 
   // Evaluate inputs
   crashPropability = evalDiscreteSteps();
-  //Serial.println(crashPropability);
-
+  Serial.print("crashPropability:"); Serial.print(crashPropability); Serial.print(", ");
+  Serial.print("Y_rot:"); Serial.print(ypr_rot[0]*180 / M_PI); Serial.print(", ");
+  Serial.print("P_rot:"); Serial.print(ypr_rot[1]*180 / M_PI); Serial.print(", ");
+  Serial.print("R_rot:"); Serial.println(ypr_rot[2]*180 / M_PI);
 
   // Serve Data as Website (if client available)
   WiFiClient client = server.available();
