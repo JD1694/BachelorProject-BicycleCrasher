@@ -167,7 +167,7 @@ def printDebug(debug, *strings):
 		print(*strings)
 
 
-def optimizeSingleThreshold(thresholdIdx, resolution=4, thresholdRange=[0,1000]):
+def optimizeSingleThreshold(thresholdIdx, resolution=4, thresholdRange=(1,1000)):
 	"""
 	Optimize a single Threshold value. Other thresholds are passed to the test-programm as zeros.
 	"""
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 	elif sys.argv[1:]:
 		# Run simulation once with given genome
 		print("Running simulation once with given genome")
-		print(runSimulation(np.array(sys.argv[1:]), debug=3))
+		print(runSimulation(np.array(sys.argv[1:]), debug=2))
 	else:
 		print("Optimizing all Threshold one after the other.")
 		results = [0 for i in range(len(thresholdNames))]

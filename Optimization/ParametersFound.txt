@@ -2,15 +2,16 @@
 THRESHOLD_SMOOTH_GYRO_X ( idx:2)	< 200
 THRESHOLD_SMOOTH_GYRO_Y ( idx:3) 	< 200
 THRESHOLD_SMOOTH_GYRO_Z ( idx:4) 	< 200
-THRESHOLD_YAW ( idx:5) 				NONE (< 360)
-THRESHOLD_PITCH ( idx:6) 			< 45
-THRESHOLD_ROLL ( idx:7) 			< 50
-THRESHOLD_INT_ACCEL_X ( idx:8) 		< 10000
-THRESHOLD_INT_ACCEL_Y ( idx:9) 		< 10000
-THRESHOLD_INT_ACCEL_Z ( idx:10) 	< 10000
-THRESHOLD_INT_GRAVITY_X ( idx:11) 	< 10000
-THRESHOLD_INT_GRAVITY_Y ( idx:12) 	< 10000
-THRESHOLD_INT_GRAVITY_Z ( idx:13) 	NONE (< 10000)
+												// THRESHOLD_YAW ( idx:5) 				NONE (< 360)
+THRESHOLD_PITCH ( idx:5) 			< 45
+THRESHOLD_ROLL ( idx:6) 			< 50
+THRESHOLD_INT_ACCEL_X ( idx:7) 		< 10000
+THRESHOLD_INT_ACCEL_Y ( idx:8) 		< 10000
+THRESHOLD_INT_ACCEL_Z ( idx:9) 	< 10000
+THRESHOLD_INT_GRAVITY_X ( idx:10) 	< 10000
+THRESHOLD_INT_GRAVITY_Y ( idx:11) 	< 10000
+												// THRESHOLD_INT_GRAVITY_Z ( idx:13) 	NONE (< 10000)
+THRESHOLD_ACCEL_DELTA ( idx:12)  [ NEW ]
 (COMMON_GRAVITY_Z = 19000)
 
 ### Evolutionary Algorithm results:
@@ -182,5 +183,15 @@ Bewertet mit:            5.416176
  Iterative:
  Stepsize 4: 36, 32, 1000, 280, 348, 76, 120, 1000, 1000, 144, 32
  Stepsize 0.02: 37.78 33.34 1002 282 349.80 76.48 120.48 1002 1002 146 33.88
- Stepsize 4: 36,32,112,280,348,76,120,88,0,144,40
- 37.6 33.12 111.76 280.98 349.16 76.38 118.46 88.26 2 145.5 39.3
+ 
+ Stepsize 4: 36, 32,  112, 280, 348, 76, 120,   88,    0, 144, 40
+ Stepsize 0.02: 37.6 33.12 111.76 280.98 349.16 76.38 118.46 88.26 2 145.5 39.3
+ 
+ "score <  bestScore": 36 32 116 280 348 76 120 88 1000 144 40 --> 50.82 (kleiner besser)
+                             ###                   ####            #####
+ "score <= bestScore": 36 32 112 280 348 76 120 88    0 144 40 --> 44.51 (kleiner besser)
+ Kein Unterschied bei THRESHOLD_INT_GRAVITY_X:
+                       36 32 114 280 348 76 120 88 1000   144 40 --> 50.82
+					   36 32 114 280 348 76 120 88    0   144 40 --> = 50.82 (NULL schaltet Threshold ab!)
+					   36 32 114 280 348 76 120 88 102.26 144 40 --> 51.72   ("score <= bestScore")
+					   36 32 114 280 348 76 120 88    1   144 40 --> 3400.15 (Nahe NULL besonders schlecht)
