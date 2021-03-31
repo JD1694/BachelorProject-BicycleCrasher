@@ -97,10 +97,10 @@ float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 // rotated to new coord sys
 float rotateZAngle = -0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
-VectorFloat aa_rot;         // [x, y, z]            accel sensor measurements
-VectorFloat gy_rot;         // [x, y, z]            gyro sensor measurements
-VectorFloat aaReal_rot;     // [x, y, z]            gravity-free accel sensor measurements
-float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+VectorFloat aa ;         // [x, y, z]            accel sensor measurements
+VectorFloat gy ;         // [x, y, z]            gyro sensor measurements
+VectorFloat aaReal ;     // [x, y, z]            gravity-free accel sensor measurements
+float ypr [3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 VectorFloat rotateZreturnVal;
 
 float crashPropability;
@@ -122,16 +122,16 @@ String html_1 = R"=====(
   <meta name='viewport' content='width=device-width, initial-scale=1.0'/>
   <meta charset='utf-8'>
   <style>
-    body {font-size:100%; background-color: #FFFFFF;} 
-    #main {display: table; margin: auto;  padding: 0 10px 0 10px; } 
-    h2 {text-align:center; } 
+    body {font-size:100%; background-color: #FFFFFF;}
+    #main {display: table; margin: auto;  padding: 0 10px 0 10px; }
+    h2 {text-align:center; }
     p { text-align:center; }
   </style>
 
-  <script> 
-    function updateData() 
-    {  
-       ajaxLoad('getData'); 
+  <script>
+    function updateData()
+    {
+       ajaxLoad('getData');
     }
 
 
@@ -175,10 +175,10 @@ String html_1 = R"=====(
        <p id='ypr_live'>None</p>
        <p id='gyro_live'>None</p>
      </div>
-   </div> 
+   </div>
  </body>
 </html>
-)====="; 
+)=====";
 
 void setup() {
 
@@ -253,7 +253,7 @@ void loop() {
   // check if DPM is ready and get latest packet (also used as check)
   if (!dmpReady) return;
   if (!mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) return;
-  
+
   // Get sensor readings
   getSensorReadings();
   // Prepare data, filter and convert to get more measurable input
@@ -262,22 +262,22 @@ void loop() {
   // Evaluate inputs
   crashPropability = evalDiscreteSteps();
   Serial.print("crashPropability:"); Serial.print(crashPropability); Serial.print(", ");
-  Serial.print("Y_rot:"); Serial.print(ypr_rot[0]*180 / M_PI); Serial.print(", ");
-  Serial.print("P_rot:"); Serial.print(ypr_rot[1]*180 / M_PI); Serial.print(", ");
-  Serial.print("R_rot:"); Serial.println(ypr_rot[2]*180 / M_PI);
+  Serial.print("Y :"); Serial.print(ypr [0]*180 / M_PI); Serial.print(", ");
+  Serial.print("P :"); Serial.print(ypr [1]*180 / M_PI); Serial.print(", ");
+  Serial.print("R :"); Serial.println(ypr [2]*180 / M_PI);
 
   // Serve Data as Website (if client available)
   WiFiClient client = server.available();
   if (!client)  { return; }
-  
+
   requestHMTL = client.readStringUntil('\r');     // Read the first line of the request
   //Serial.println(requestHMTL);
-  
-  if ( requestHMTL.indexOf("getData") > 0 ) { 
+
+  if ( requestHMTL.indexOf("getData") > 0 ) {
     client.print( header );
-    client.print( crashPropability );   
+    client.print( crashPropability );
     client.print("|"); client.print( crashCause );
-    client.print("|"); client.print("Yaw: ");client.print(ypr_rot[0]*180 / M_PI); client.print(";  Pitch: ");client.print(ypr_rot[1]*180 / M_PI); client.print(";  Roll: ");client.print(ypr_rot[2]*180 / M_PI);
+    client.print("|"); client.print("Yaw: ");client.print(ypr [0]*180 / M_PI); client.print(";  Pitch: ");client.print(ypr [1]*180 / M_PI); client.print(";  Roll: ");client.print(ypr [2]*180 / M_PI);
     client.print("|"); client.print("G_x: ");client.print(gy.x); client.print(";  G_y: ");client.print(gy.y); client.print(";  G_z: ");client.println(gy.z);
     client.println(); //end http response
   }
@@ -295,7 +295,7 @@ void loop() {
     client.println("\n\r\n"); //end http response
     Serial.println("New page served");
   }
-  
+
   /*if (client) {                     //established connection
     Serial.println("Connected client");
     String currentLine = "";         //holds incoming data
@@ -322,7 +322,7 @@ void loop() {
             client.print("Crash Propability:");
             client.print(crashPropability);
             client.println("</p>");
-            
+
             client.print("<p>");
             client.print("Crash Cause:");
             client.print(crashCause);
@@ -375,27 +375,27 @@ void getSensorReadings() {
 
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
-  
+
   // rotate used sensor data to new cood system
-  rotateZ( rotateZAngle, aa, &aa_rot );
-  rotateZ( rotateZAngle, aaReal, &aaReal_rot );
-  rotateZ( rotateZAngle, gy, &gy_rot );
-  rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+  //rotateZ( rotateZAngle, aa, &aa  );
+  //rotateZ( rotateZAngle, aaReal, &aaReal  );
+  //rotateZ( rotateZAngle, gy, &gy  );
+  //rotateZ( rotateZAngle, ypr, &ypr [0] );
 
   // Filter rotated aaReal data (Exponential Moving Average)
-  accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.x * MOVING_AVERAGE_DECLINE;
-  accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.y * MOVING_AVERAGE_DECLINE;
-  accelIntegral.z = accelIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.z * MOVING_AVERAGE_DECLINE;
+  accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal .x * MOVING_AVERAGE_DECLINE;
+  accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal .y * MOVING_AVERAGE_DECLINE;
+  accelIntegral.z = accelIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aaReal .z * MOVING_AVERAGE_DECLINE;
 
   // Filter rotated aa data (Exponential Moving Average)
-  accelGravityIntegral.x = accelGravityIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.x * MOVING_AVERAGE_DECLINE;
-  accelGravityIntegral.y = accelGravityIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.y * MOVING_AVERAGE_DECLINE;
-  accelGravityIntegral.z = accelGravityIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.z * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.x = accelGravityIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aa .x * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.y = accelGravityIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aa .y * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.z = accelGravityIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aa .z * MOVING_AVERAGE_DECLINE;
 
   // Filter gyro data (Exponential Moving Average)
-  gyroSmoothend.x = gyroSmoothend.x * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.x * MOVING_AVERAGE_DECLINE;
-  gyroSmoothend.y = gyroSmoothend.y * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.y * MOVING_AVERAGE_DECLINE;
-  gyroSmoothend.z = gyroSmoothend.z * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.z * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.x = gyroSmoothend.x * (1 - MOVING_AVERAGE_DECLINE) + gy .x * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.y = gyroSmoothend.y * (1 - MOVING_AVERAGE_DECLINE) + gy .y * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.z = gyroSmoothend.z * (1 - MOVING_AVERAGE_DECLINE) + gy .z * MOVING_AVERAGE_DECLINE;
   // Difference in acceleration compared to moving average
   delta_x = former_x - accelIntegral.x;
   delta_y = former_y - accelIntegral.y;
@@ -415,19 +415,19 @@ double norm(double a, double b, double c) {
 }
 
 
-void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
+//  void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ) {
 
 
 
-  rotateZreturnVal.x = cos(radAngle) * point.x - sin(radAngle) * point.y;
-  rotateZreturnVal.y = sin(radAngle) * point.x + cos(radAngle) * point.y;
-  rotateZreturnVal.z = point.z;
-  *rotatedPoint = rotateZreturnVal;
+//  rotateZreturnVal.x = cos(radAngle) * point.x - sin(radAngle) * point.y;
+//  rotateZreturnVal.y = sin(radAngle) * point.x + cos(radAngle) * point.y;
+//  rotateZreturnVal.z = point.z;
+//  *rotatedPoint = rotateZreturnVal;
 
-  //delete &returnVal;
+//  //delete &returnVal;
 
-  return;
-}
+//  return;
+//}
 
 
 void rotateZ(float radAngle, float point[3], float *rotatedPoint ) {
@@ -466,8 +466,8 @@ double evalDiscreteSteps() {
               + 1 * (abs(accel_delta) > THRESHOLD_ACCEL_DELTA * 10000 / 100)
               ;*/
               // Absolute Angle
-              + 1 * checkThreshold(abs(ypr_rot[1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
-              + 1 * checkThreshold(abs(ypr_rot[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
+              + 1 * checkThreshold(abs(ypr [1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
+              + 1 * checkThreshold(abs(ypr[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
 
               // Rate of rotation
               + 1 * checkThreshold(abs(gyroSmoothend.x), THRESHOLD_SMOOTH_GYRO_X * 200 / 100, "THRESHOLD_SMOOTH_GYRO_X")

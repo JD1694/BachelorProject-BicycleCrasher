@@ -243,10 +243,10 @@ void debug_output(bool debug, string timestamp) {
 void prepareData() {
   /* Prepare data, filter and convert to get more measurable input */
   // rotate used sensor data to new cood system
-  rotateZ( rotateZAngle, aa, &aa_rot );
-  rotateZ( rotateZAngle, aaReal, &aaReal_rot );
-  rotateZ( rotateZAngle, gy, &gy_rot );
-  rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
+  //rotateZ( rotateZAngle, aa, &aa_rot );
+  //rotateZ( rotateZAngle, aaReal, &aaReal_rot );
+  //rotateZ( rotateZAngle, gy, &gy_rot );
+  //rotateZ( rotateZAngle, ypr, &ypr_rot[0] );
   
   
 /*
@@ -269,19 +269,19 @@ void prepareData() {
   fifo_aa.push(aa);
   */
   // Filter rotated aaReal data (Exponential Moving Average)
-  accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.x * MOVING_AVERAGE_DECLINE;
-  accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.y * MOVING_AVERAGE_DECLINE;
-  accelIntegral.z = accelIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aaReal_rot.z * MOVING_AVERAGE_DECLINE;
+  accelIntegral.x = accelIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aaReal.x * MOVING_AVERAGE_DECLINE;
+  accelIntegral.y = accelIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aaReal.y * MOVING_AVERAGE_DECLINE;
+  accelIntegral.z = accelIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aaReal.z * MOVING_AVERAGE_DECLINE;
   
   // Filter rotated aa data (Exponential Moving Average)
-  accelGravityIntegral.x = accelGravityIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.x * MOVING_AVERAGE_DECLINE;
-  accelGravityIntegral.y = accelGravityIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.y * MOVING_AVERAGE_DECLINE;
-  accelGravityIntegral.z = accelGravityIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aa_rot.z * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.x = accelGravityIntegral.x * (1 - MOVING_AVERAGE_DECLINE) + aa.x * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.y = accelGravityIntegral.y * (1 - MOVING_AVERAGE_DECLINE) + aa.y * MOVING_AVERAGE_DECLINE;
+  accelGravityIntegral.z = accelGravityIntegral.z * (1 - MOVING_AVERAGE_DECLINE) + aa.z * MOVING_AVERAGE_DECLINE;
   
   // Filter gyro data (Exponential Moving Average)
-  gyroSmoothend.x = gyroSmoothend.x * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.x * MOVING_AVERAGE_DECLINE;
-  gyroSmoothend.y = gyroSmoothend.y * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.y * MOVING_AVERAGE_DECLINE;
-  gyroSmoothend.z = gyroSmoothend.z * (1 - MOVING_AVERAGE_DECLINE) + gy_rot.z * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.x = gyroSmoothend.x * (1 - MOVING_AVERAGE_DECLINE) + gy.x * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.y = gyroSmoothend.y * (1 - MOVING_AVERAGE_DECLINE) + gy.y * MOVING_AVERAGE_DECLINE;
+  gyroSmoothend.z = gyroSmoothend.z * (1 - MOVING_AVERAGE_DECLINE) + gy.z * MOVING_AVERAGE_DECLINE;
   // Difference in acceleration compared to moving average
   delta_x =former_x-accelIntegral.x;
   delta_y =former_y-accelIntegral.y;
@@ -428,10 +428,10 @@ void rotateZ(float radAngle, VectorInt16 point, VectorFloat *rotatedPoint ){
   return;
 }
 
-void rotateZ(float radAngle, float point[3], float *rotatedPoint ){
-  /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
-  *rotatedPoint     = cos(radAngle)*point[0] - sin(radAngle)*point[1];
-  *(rotatedPoint+1) = sin(radAngle)*point[0] + cos(radAngle)*point[1];
-  *(rotatedPoint+2) = point[2];
-  return;
-}
+//void rotateZ(float radAngle, float point[3], float *rotatedPoint ){
+//  /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
+//  *rotatedPoint     = cos(radAngle)*point[0] - sin(radAngle)*point[1];
+//  *(rotatedPoint+1) = sin(radAngle)*point[0] + cos(radAngle)*point[1];
+//  *(rotatedPoint+2) = point[2];
+//  return;
+//}
