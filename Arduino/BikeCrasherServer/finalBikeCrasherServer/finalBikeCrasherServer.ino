@@ -3,7 +3,7 @@
 #include <WiFiAP.h>
 #include <Wire.h>
 #include <I2Cdev.h>
-#include <MPU6050_6Axis_MotionApps20.h>
+#include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
 
 
@@ -36,20 +36,20 @@ float threshholds[] = /*{ 44,
                         //missing
                       };*/
                       {37.78, 33.34, 1002, 282, 349.80, 76.48, 120.48, 1002, 1002, 146, 33.88};
-float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]; //needed
-float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]; //needed
-float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]; //needed
+float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]* 200 / 100; //needed
+float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]* 200 / 100; //needed
+float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]* 200 / 100; //needed
 //float THRESHOLD_YAW = threshholds[4]; //not needed
-float THRESHOLD_PITCH = threshholds[3]; //needed
-float THRESHOLD_ROLL = threshholds[4]; //needed
-float THRESHOLD_INT_ACCEL_X = threshholds[5];  //needed
-float THRESHOLD_INT_ACCEL_Y = threshholds[6]; //needed
-float THRESHOLD_INT_ACCEL_Z = threshholds[7]; //needed
-float THRESHOLD_INT_GRAVITY_X = threshholds[8]; //needed
-float THRESHOLD_INT_GRAVITY_Y = threshholds[9]; //needed
+float THRESHOLD_PITCH = threshholds[3]* 45 / 100; //needed
+float THRESHOLD_ROLL = threshholds[4]* 50 / 100; //needed
+float THRESHOLD_INT_ACCEL_X = threshholds[5]* 10000 / 100;  //needed
+float THRESHOLD_INT_ACCEL_Y = threshholds[6]* 10000 / 100; //needed
+float THRESHOLD_INT_ACCEL_Z = threshholds[7]* 10000 / 100; //needed
+float THRESHOLD_INT_GRAVITY_X = threshholds[8]* 10000 / 100; //needed
+float THRESHOLD_INT_GRAVITY_Y = threshholds[9]* 10000 / 100; //needed
 //float THRESHOLD_INT_GRAVITY_Z = threshholds[12];  //not needed
 //float COMMON_GRAVITY_Z = threshholds[13]; //not needed
-float THRESHOLD_ACCEL_DELTA = threshholds[10]; //needed
+float THRESHOLD_ACCEL_DELTA = threshholds[10]* 10000 / 100; //needed
 
 
 // Discrete Step counter
@@ -466,25 +466,25 @@ double evalDiscreteSteps() {
               + 1 * (abs(accel_delta) > THRESHOLD_ACCEL_DELTA * 10000 / 100)
               ;*/
               // Absolute Angle
-              + 1 * checkThreshold(abs(ypr [1] * 180 / M_PI), THRESHOLD_PITCH * 45 / 100, "THRESHOLD_PITCH")///// change to rad for more efficienty
-              + 1 * checkThreshold(abs(ypr[2] * 180 / M_PI), THRESHOLD_ROLL * 50 / 100, "THRESHOLD_ROLL")
+              + 1 * checkThreshold(abs(ypr [1] * 180 / M_PI), THRESHOLD_PITCH, "THRESHOLD_PITCH")///// change to rad for more efficienty
+              + 1 * checkThreshold(abs(ypr[2] * 180 / M_PI), THRESHOLD_ROLL, "THRESHOLD_ROLL")
 
               // Rate of rotation
-              + 1 * checkThreshold(abs(gyroSmoothend.x), THRESHOLD_SMOOTH_GYRO_X * 200 / 100, "THRESHOLD_SMOOTH_GYRO_X")
-              + 1 * checkThreshold(abs(gyroSmoothend.y), THRESHOLD_SMOOTH_GYRO_Y * 200 / 100, "THRESHOLD_SMOOTH_GYRO_Y")
-              + 1 * checkThreshold(abs(gyroSmoothend.z), THRESHOLD_SMOOTH_GYRO_Z * 200 / 100, "THRESHOLD_SMOOTH_GYRO_Z")
+              + 1 * checkThreshold(abs(gyroSmoothend.x), THRESHOLD_SMOOTH_GYRO_X , "THRESHOLD_SMOOTH_GYRO_X")
+              + 1 * checkThreshold(abs(gyroSmoothend.y), THRESHOLD_SMOOTH_GYRO_Y , "THRESHOLD_SMOOTH_GYRO_Y")
+              + 1 * checkThreshold(abs(gyroSmoothend.z), THRESHOLD_SMOOTH_GYRO_Z , "THRESHOLD_SMOOTH_GYRO_Z")
 
               // Acceleration
-              + 1 * checkThreshold(abs(accelIntegral.x), THRESHOLD_INT_ACCEL_X * 10000 / 100, "THRESHOLD_INT_ACCEL_X")
-              + 1 * checkThreshold(abs(accelIntegral.y), THRESHOLD_INT_ACCEL_Y * 10000 / 100, "THRESHOLD_INT_ACCEL_Y")
-              + 1 * checkThreshold(abs(accelIntegral.z), THRESHOLD_INT_ACCEL_Z * 10000 / 100, "THRESHOLD_INT_ACCEL_Z")
+              + 1 * checkThreshold(abs(accelIntegral.x), THRESHOLD_INT_ACCEL_X , "THRESHOLD_INT_ACCEL_X")
+              + 1 * checkThreshold(abs(accelIntegral.y), THRESHOLD_INT_ACCEL_Y , "THRESHOLD_INT_ACCEL_Y")
+              + 1 * checkThreshold(abs(accelIntegral.z), THRESHOLD_INT_ACCEL_Z , "THRESHOLD_INT_ACCEL_Z")
 
               // Direction of Gravity and Momentum
-              + 1 * checkThreshold(abs(accelGravityIntegral.x), THRESHOLD_INT_GRAVITY_X * 10000 / 100, "THRESHOLD_INT_GRAVITY_X")
-              + 1 * checkThreshold(abs(accelGravityIntegral.y), THRESHOLD_INT_GRAVITY_Y * 10000 / 100, "THRESHOLD_INT_GRAVITY_Y")
+              + 1 * checkThreshold(abs(accelGravityIntegral.x), THRESHOLD_INT_GRAVITY_X , "THRESHOLD_INT_GRAVITY_X")
+              + 1 * checkThreshold(abs(accelGravityIntegral.y), THRESHOLD_INT_GRAVITY_Y , "THRESHOLD_INT_GRAVITY_Y")
 
               // Change in Acceleration
-              + 1 * checkThreshold(abs(accel_delta), THRESHOLD_ACCEL_DELTA * 10000 / 100, "THRESHOLD_ACCEL_DELTA")
+              + 1 * checkThreshold(abs(accel_delta), THRESHOLD_ACCEL_DELTA , "THRESHOLD_ACCEL_DELTA")
               ;
 
   return stepCount / 11;
