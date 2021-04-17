@@ -7,49 +7,22 @@
 #include "Wire.h"
 
 
-float threshholds[] = /*{ 44,
-                        605,
-                        360,
-                        535,
-                        649,
-                        524,
-                        815,
-                        308,
-                        468,
-                        102,
-                        905,
-                        741,
-                        38};
-{                       50.41649852, //0
-                        312.41631607,//1
-                        941.86966547,//2
-                       // 489.9528661,
-                        596.17546761,//3
-                        861.43288347,//4
-                        82.45992038,//5
-                        93.90663596,//6
-                        628.08448713,//7
-                        688.82112735,//8
-                        638.62796796//9
-                        //255.40699726,
-                        //532.64472836
-                        //missing
-                      };*/
-                      {37.78, 33.34, 1002, 282, 349.80, 76.48, 120.48, 1002, 1002, 146, 33.88};
-float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]* 200 / 100; //needed
-float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]* 200 / 100; //needed
-float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]* 200 / 100; //needed
+
+float threshholds[] = {41.40, 49.86, 111.76, 280.98, 349.16, 69.54, 121.80, 88.26, 79.06, 134.78, 39.30};
+float THRESHOLD_SMOOTH_GYRO_X = threshholds[0]* 2; //needed
+float THRESHOLD_SMOOTH_GYRO_Y = threshholds[1]* 2; //needed
+float THRESHOLD_SMOOTH_GYRO_Z = threshholds[2]* 2; //needed
 //float THRESHOLD_YAW = threshholds[4]; //not needed
 float THRESHOLD_PITCH = threshholds[3]* 45 / 100; //needed
 float THRESHOLD_ROLL = threshholds[4]* 50 / 100; //needed
-float THRESHOLD_INT_ACCEL_X = threshholds[5]* 10000 / 100;  //needed
-float THRESHOLD_INT_ACCEL_Y = threshholds[6]* 10000 / 100; //needed
-float THRESHOLD_INT_ACCEL_Z = threshholds[7]* 10000 / 100; //needed
-float THRESHOLD_INT_GRAVITY_X = threshholds[8]* 10000 / 100; //needed
-float THRESHOLD_INT_GRAVITY_Y = threshholds[9]* 10000 / 100; //needed
+float THRESHOLD_INT_ACCEL_X = threshholds[5]* 100;  //needed
+float THRESHOLD_INT_ACCEL_Y = threshholds[6]* 100; //needed
+float THRESHOLD_INT_ACCEL_Z = threshholds[7]* 100; //needed
+float THRESHOLD_INT_GRAVITY_X = threshholds[8]* 100; //needed
+float THRESHOLD_INT_GRAVITY_Y = threshholds[9]* 100; //needed
 //float THRESHOLD_INT_GRAVITY_Z = threshholds[12];  //not needed
 //float COMMON_GRAVITY_Z = threshholds[13]; //not needed
-float THRESHOLD_ACCEL_DELTA = threshholds[10]* 10000 / 100; //needed
+float THRESHOLD_ACCEL_DELTA = threshholds[10]* 100; //needed
 
 
 // Discrete Step counter
@@ -96,12 +69,12 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 // rotated to new coord sys
-float rotateZAngle = -0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
-VectorFloat aa ;         // [x, y, z]            accel sensor measurements
-VectorFloat gy ;         // [x, y, z]            gyro sensor measurements
-VectorFloat aaReal ;     // [x, y, z]            gravity-free accel sensor measurements
-float ypr [3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-VectorFloat rotateZreturnVal;
+/*float rotateZAngle = -0.471239;   // Angle to rotate sensor coord sys into fixed coord sys --> found CALIBRATION Value: 27 degrees
+VectorFloat aa_rot ;         // [x, y, z]            accel sensor measurements
+VectorFloat gy_rot ;         // [x, y, z]            gyro sensor measurements
+VectorFloat aaReal_rot ;     // [x, y, z]            gravity-free accel sensor measurements
+float ypr_rot[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+VectorFloat rotateZreturnVal;*/
 
 float crashPropability;
 String crashCause = "";
@@ -429,14 +402,14 @@ double norm(double a, double b, double c) {
 //  return;
 //}
 
-
+/*
 void rotateZ(float radAngle, float point[3], float *rotatedPoint ) {
-  /*Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given*/
+  //Rotate a point around the Z-Axis by the angle. Writes the rotated point to the pointer given
   * rotatedPoint      = cos(radAngle) * point[0] - sin(radAngle) * point[1];
   *(rotatedPoint + 1) = sin(radAngle) * point[0] + cos(radAngle) * point[1];
   *(rotatedPoint + 2) = point[2];
   return;
-}
+}*/
 
 
 double evalDiscreteSteps() {
