@@ -1,7 +1,7 @@
 import Serverconnect # Connect to Sensor Device
 import sys
 import traceback
-import keyboard  # hotkeys ???
+import keyboard  # hotkeys to save timestamp of crash
 from datetime import datetime
 
 def callback_button(stamp_log):
