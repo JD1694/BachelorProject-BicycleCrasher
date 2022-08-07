@@ -9,7 +9,6 @@ This detection acts as the basic structure for a whole safty system. Once a cras
 |Overview as presentation slides       | Dokumentation/SensorBike_Präsentation.pdf                                            |
 |Documentation                         | Dokumentation/Dokumentation Bachelorprojekt.pdf                                      |
 |Materials bought:                     | Dokumentation/Bach.-Projekt Materialien Denker, von Waldow - Tabellenblatt1.pdf      |
-|Link to video footage of crash tests: | https://drive.google.com/drive/folders/1jW4TNLSxI2Im2vOG5XeLKp5CSRpxyoWq?usp=sharing |
 
 ![Crash gif with live data](Dokumentation/Umtreten_mitLiveData.gif)
 
